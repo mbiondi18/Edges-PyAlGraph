@@ -1,0 +1,7 @@
+Execution Time: 0.000011 seconds
+Number of Colors Used: 1
+Algorithm Used: Maximal Pairing Algorithm
+Graph Connections:
+L1-R1
+L3-R3
+L4-R2
