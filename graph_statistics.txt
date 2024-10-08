@@ -1,0 +1,7 @@
+Execution Time: 0.000000 seconds
+Number of Colors Used: 3
+Algorithm Used: Sequential Coloring
+Graph Connections:
+1-2
+1-3
+2-3
