@@ -92,6 +92,22 @@ class App(QMainWindow):
 
         main_layout.addWidget(visualizer_container, 1)  # Give it a stretch factor of 1
 
+        # Create right sidebar for sorted edges
+        right_sidebar = QWidget()
+        right_sidebar_layout = QVBoxLayout(right_sidebar)
+        right_sidebar.setFixedWidth(220)
+
+        app.sorted_edges_label = QLabel("Sorted Edges:")
+        app.sorted_edges_label.setAlignment(Qt.AlignTop)
+        app.sorted_edges_label.setWordWrap(True)
+        right_sidebar_layout.addWidget(app.sorted_edges_label)
+        right_sidebar_layout.addStretch(1)
+
+        app.right_sidebar = right_sidebar  # Store the reference to right_sidebar
+        app.right_sidebar.setVisible(False)  # Hide by default
+
+        main_layout.addWidget(right_sidebar)
+
     def open_graph_window(app):
         user_order_dialog = UserOrderDialog(app)
         result = user_order_dialog.exec_()
@@ -132,10 +148,11 @@ class App(QMainWindow):
     def on_secuencial_coloring_button_activated(self, text):
         if text == "Secuencial coloring default order":
             self.secuencial_coloring(self.graph.edges())
+            self.right_sidebar.setVisible(True)  # Show the right sidebar
         elif text == "Secuencial coloring user order":
             edge_colors = self.colorer.sequential_user_order_coloring(self.graph)
             self.print(edge_colors)
-            self.sorted_edges_label.setVisible(False)  # Hide the sorted edges label for user order
+            self.right_sidebar.setVisible(False)  # Hide the right sidebar
 
     def bipartite_coloring(app):
         edge_colors = app.colorer.bipartite_coloring(app.graph)
@@ -146,14 +163,13 @@ class App(QMainWindow):
         edge_colors = app.colorer.secuencial_coloring(app.graph, edges)
         app.print(edge_colors)
         app.display_sorted_edges()
-        app.sorted_edges_label.setVisible(True)  # Show the sorted edges label
 
     def display_sorted_edges(self):
         if hasattr(self.colorer, 'sorted_edges'):
             sorted_edges_str = "\n".join([f"{u}-{v}" for u, v in self.colorer.sorted_edges])
-            self.sorted_edges_label.setText(f"Sorted Edges:\n{sorted_edges_str}")
+            self.sorted_edges_label.setText(f"Sorted Edges:\n\n{sorted_edges_str}")
         else:
-            self.sorted_edges_label.setText("Sorted Edges: Not available")
+            self.sorted_edges_label.setText("Sorted Edges:\n\nNot available")
 
     def secuencial_coloring_user_order(app):
         app.unable_modes()
