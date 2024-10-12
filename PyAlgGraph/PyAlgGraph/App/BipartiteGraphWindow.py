@@ -82,7 +82,8 @@ class BipartiteGraphWindow(QMainWindow):
 
     def create_graph(self):
         bipartite_graph = self.create_bipartite_graph()
-        self.app.create_bipartite_graph(bipartite_graph)
+        positions = self.get_positions()
+        self.app.create_bipartite_graph(bipartite_graph, positions)
         self.close()
 
     def create_bipartite_graph(self):
@@ -99,6 +100,14 @@ class BipartiteGraphWindow(QMainWindow):
         print(f"Nodes: {bipartite_graph.nodes(data=True)}")
         print(f"Edges: {bipartite_graph.edges()}")
         return bipartite_graph
+    
+    def get_positions(self):
+        positions = {}
+        for side in ['left', 'right']:
+            nodes = self.nodes_left if side == 'left' else self.nodes_right
+            for node, (x, y) in nodes.items():
+                positions[f"{side}_{node}"] = (x / self.scene.width() - 0.5, 1 - y / self.scene.height())
+        return positions
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
