@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (
     QVBoxLayout, QMainWindow, QPushButton, QGraphicsScene, QGraphicsView, 
     QGraphicsEllipseItem, QComboBox, QGraphicsTextItem, QLabel, QGraphicsLineItem, 
-    QWidget, QHBoxLayout, QDialog  # Add this import at the top of the file
+    QWidget, QHBoxLayout, QDialog, QMessageBox  # Add this import at the top of the file
 )
 from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QPen, QBrush, QPainter, QFont
@@ -74,7 +74,7 @@ class App(QMainWindow):
         sidebar_layout.addStretch(1)
         main_layout.addWidget(sidebar)
 
-        # Create a container for the visualizer and step buttons
+        # Create a container for the visualizer, step buttons, and sorted edges label
         visualizer_container = QWidget()
         visualizer_layout = QVBoxLayout(visualizer_container)
         app.visualizer = GraphVisualizer(app)
@@ -83,7 +83,14 @@ class App(QMainWindow):
         # Create step buttons
         app.create_step_buttons(visualizer_layout)
 
-        main_layout.addWidget(visualizer_container)
+        # Add the sorted_edges_label to the visualizer container
+        app.sorted_edges_label = QLabel("Sorted Edges: Not available")
+        app.sorted_edges_label.setAlignment(Qt.AlignTop)
+        app.sorted_edges_label.setWordWrap(True)
+        app.sorted_edges_label.setVisible(False)  # Hide by default
+        visualizer_layout.addWidget(app.sorted_edges_label)
+
+        main_layout.addWidget(visualizer_container, 1)  # Give it a stretch factor of 1
 
     def open_graph_window(app):
         user_order_dialog = UserOrderDialog(app)
@@ -128,6 +135,7 @@ class App(QMainWindow):
         elif text == "Secuencial coloring user order":
             edge_colors = self.colorer.sequential_user_order_coloring(self.graph)
             self.print(edge_colors)
+            self.sorted_edges_label.setVisible(False)  # Hide the sorted edges label for user order
 
     def bipartite_coloring(app):
         edge_colors = app.colorer.bipartite_coloring(app.graph)
@@ -137,6 +145,15 @@ class App(QMainWindow):
     def secuencial_coloring(app, edges):
         edge_colors = app.colorer.secuencial_coloring(app.graph, edges)
         app.print(edge_colors)
+        app.display_sorted_edges()
+        app.sorted_edges_label.setVisible(True)  # Show the sorted edges label
+
+    def display_sorted_edges(self):
+        if hasattr(self.colorer, 'sorted_edges'):
+            sorted_edges_str = "\n".join([f"{u}-{v}" for u, v in self.colorer.sorted_edges])
+            self.sorted_edges_label.setText(f"Sorted Edges:\n{sorted_edges_str}")
+        else:
+            self.sorted_edges_label.setText("Sorted Edges: Not available")
 
     def secuencial_coloring_user_order(app):
         app.unable_modes()

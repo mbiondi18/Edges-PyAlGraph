@@ -32,6 +32,9 @@ class StatisticsWindow(QWidget):
         self.import_button.clicked.connect(self.import_statistics)
         layout.addWidget(self.import_button)
 
+        self.sorted_edges_label = QLabel()
+        layout.addWidget(self.sorted_edges_label)
+
         self.setLayout(layout)
 
     def get_colors_used(self):
@@ -83,3 +86,14 @@ class StatisticsWindow(QWidget):
             QMessageBox.information(self, "Statistics Imported", f"Statistics have been imported to:\n{abs_path}")
         except IOError as e:
             QMessageBox.warning(self, "Error", f"An error occurred while writing the file:\n{str(e)}")
+
+    def get_sorted_edges(self):
+        if hasattr(self.app.colorer, 'sorted_edges'):
+            return "\n".join([f"{u}-{v}" for u, v in self.app.colorer.sorted_edges])
+        return "Not available"
+
+    def update_statistics(self):
+        # ... (existing update code)
+        
+        sorted_edges = self.get_sorted_edges()
+        self.sorted_edges_label.setText(f"Sorted Edges:\n{sorted_edges}")

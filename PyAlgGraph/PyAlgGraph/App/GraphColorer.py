@@ -19,9 +19,9 @@ class GraphColorer:
             return graph.degree(edge[0]) + graph.degree(edge[1])
 
         # Sort edges based on the sum of degrees of incident vertices (descending order)
-        sorted_edges = sorted(edges, key=edge_weight, reverse=True)
+        self.sorted_edges = sorted(edges, key=edge_weight, reverse=True)
 
-        for u, v in sorted_edges:
+        for u, v in self.sorted_edges:
             print("Edge: ", (u, v))
             available_colors = [True] * len(colors)
 
