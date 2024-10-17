@@ -200,14 +200,13 @@ class App(QMainWindow):
                     self.visualizer.positions[node] = (0.45, 1 - (i / (max_count - 1)) if max_count > 1 else 0.5)
             else:
                 print("Using existing positions")
-
             print("Graph nodes:", self.graph.nodes())
             print("Graph edges:", self.graph.edges())
             print("Positions:", self.visualizer.positions)
-
+            
             # Draw the initial uncolored graph
             self.visualizer.draw_bipartite_matching(self.graph, {}, set(), set(), pos=self.visualizer.positions)
-
+            
             # Initialize colorer if not already done
             if not hasattr(self, 'colorer'):
                 self.colorer = GraphColorer(self.graph)
@@ -229,6 +228,28 @@ class App(QMainWindow):
                 traceback.print_exc()
         else:
             print("The current graph is not bipartite or no graph is loaded.")
+
+    def update_bipartite_visualization(self):
+        if hasattr(self, 'matching_states') and self.matching_states:
+            current_state = self.matching_states[self.current_step]
+            current_matching = current_state["matching"]
+            augmenting_path = current_state.get("augmenting_path")
+            
+            left_nodes, right_nodes = nx.bipartite.sets(self.graph)
+            unassigned_left = set(left_nodes) - set(current_matching.keys())
+            unassigned_right = set(right_nodes) - set(current_matching.values())
+            
+            self.visualizer.draw_bipartite_matching(
+                self.graph, 
+                current_matching, 
+                unassigned_left, 
+                unassigned_right, 
+                pos=self.visualizer.positions,
+                augmenting_path=augmenting_path
+            )
+            self.visualizer.update_step_info(self.current_step + 1, len(self.matching_states))
+        else:
+            print("No matching states available.")
 
     def show_statistics(app):
         app.statistics_window = StatisticsWindow(app)
@@ -256,23 +277,8 @@ class App(QMainWindow):
             self.current_step += 1
             self.update_bipartite_visualization()
 
-    def update_bipartite_visualization(self):
-        if self.matching_states and 0 <= self.current_step < len(self.matching_states):
-            current_state = self.matching_states[self.current_step]
-            current_matching = current_state["matching"]
-            augmenting_path = current_state["augmenting_path"]
-            
-            unassigned_left = set(node for node in self.graph.nodes() if node.startswith('left_')) - set(current_matching.keys())
-            unassigned_right = set(node for node in self.graph.nodes() if node.startswith('right_')) - set(current_matching.values())
-            
-            self.visualizer.draw_bipartite_matching(
-                self.graph, 
-                current_matching, 
-                unassigned_left, 
-                unassigned_right, 
-                pos=self.visualizer.positions, 
-                augmenting_path=augmenting_path
-            )
-            print(f"Updated visualization for step {self.current_step}")
-        else:
-            print("No matching states available or invalid current step")
+    
+
+
+
+

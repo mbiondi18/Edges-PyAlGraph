@@ -177,6 +177,11 @@ class GraphVisualizer(QWidget):
             ax.plot([], [], '-b', label='Augmenting Path', linewidth=2.5)
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
 
+        # Add augmenting path text description
+        if augmenting_path:
+            path_description = " → ".join(node.split('_')[1] for node in augmenting_path)
+            ax.text(0, -0.1, f"Augmenting Path: {path_description}", ha='center', va='center', fontsize=12, fontweight='bold')
+
         self.figure.tight_layout()
         self.canvas.draw()
 
@@ -187,6 +192,7 @@ class GraphVisualizer(QWidget):
         if self.positions is None:
             self.positions = nx.spring_layout(graph)
         return self.positions
+
 
 
 
