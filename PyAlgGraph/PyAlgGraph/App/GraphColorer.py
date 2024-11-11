@@ -13,7 +13,7 @@ class GraphColorer:
 
     def secuencial_coloring(self, graph: nx.Graph, edges: list):
         start_time = time.time()
-        edge_colors = {}
+        self.edge_colors = {}  # Store edge colors as class attribute
 
         def edge_weight(edge):
             return graph.degree(edge[0]) + graph.degree(edge[1])
@@ -22,35 +22,32 @@ class GraphColorer:
         self.sorted_edges = sorted(edges, key=edge_weight, reverse=True)
 
         for u, v in self.sorted_edges:
-            print("Edge: ", (u, v))
             available_colors = [True] * len(colors)
 
-            # Verificar colores de aristas adyacentes
+            # Check colors of adjacent edges
             for w in graph.neighbors(u):
                 edge = (u, w) if u < w else (w, u)
-                if edge in edge_colors:
-                    color_index = colors.index(edge_colors[edge])
+                if edge in self.edge_colors:
+                    color_index = colors.index(self.edge_colors[edge])
                     available_colors[color_index] = False
             for w in graph.neighbors(v):
-                edge = (v, w) if (v, w) in edge_colors else (w, v)
-                if edge in edge_colors:
-                    color_index = colors.index(edge_colors[edge])
+                edge = (v, w) if v < w else (w, v)
+                if edge in self.edge_colors:
+                    color_index = colors.index(self.edge_colors[edge])
                     available_colors[color_index] = False
 
             # Assign the first available color
             for i, is_available in enumerate(available_colors):
                 if is_available:
                     edge_color = colors[i]
-                    edge_colors[(u, v)] = edge_color
+                    self.edge_colors[(u, v)] = edge_color
                     break
 
-        print("Greedy Coloring edge colors: ", edge_colors)
         end_time = time.time()
         self.execution_time = end_time - start_time
-        print("Execution time: ", self.execution_time, " seconds")
-        self.colors_used = len(set(edge_colors.values()))
+        self.colors_used = len(set(self.edge_colors.values()))
         self.algorithm_used = "Sequential Coloring with Degree Ordering"
-        return edge_colors
+        return self.edge_colors
     
     def bipartite_coloring(self, graph: nx.Graph):
         start_time = time.time()
@@ -132,24 +129,34 @@ class GraphColorer:
         return matching_states
 
     def find_augmenting_path(self, graph, matching, left_nodes, right_nodes):
+        all_augmenting_paths = []
         queue = [(left, [left]) for left in left_nodes if left not in matching]
-        visited = set()
+        visited_per_path = {left: {left} for left in left_nodes if left not in matching}
         
         while queue:
             node, path = queue.pop(0)
-            if node not in visited:
-                visited.add(node)
-                
-                if node in right_nodes and node not in matching.values():
-                    return path
-                
-                neighbors = set(graph.neighbors(node)) - visited
-                for neighbor in neighbors:
-                    if (node in matching and neighbor != matching[node]) or (node not in matching):
-                        new_path = path + [neighbor]
-                        queue.append((neighbor, new_path))
+            visited = visited_per_path[path[0]]
+            
+            if node in right_nodes and node not in matching.values():
+                all_augmenting_paths.append(path)
+                continue
+            
+            neighbors = set(graph.neighbors(node)) - visited
+            for neighbor in neighbors:
+                if (node in matching and neighbor != matching[node]) or (node not in matching):
+                    new_path = path + [neighbor]
+                    new_visited = visited_per_path[path[0]].copy()
+                    new_visited.add(neighbor)
+                    visited_per_path[path[0]] = new_visited
+                    queue.append((neighbor, new_path))
         
-        return None
+        if not all_augmenting_paths:
+            return None
+        
+        # Return the shortest augmenting path
+        shortest_path = min(all_augmenting_paths, key=len)
+        print(f"Found {len(all_augmenting_paths)} augmenting paths. Choosing shortest: {shortest_path}")
+        return shortest_path
 
     def sequential_user_order_coloring(self, graph: nx.Graph):
         start_time = time.perf_counter()

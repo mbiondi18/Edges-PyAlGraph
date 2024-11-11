@@ -118,13 +118,13 @@ class App(QMainWindow):
     def unable_modes(app):
         app.select_order_mode = False
 
-    def create_graph(app, graph): 
+    def create_graph(app, graph, positions=None): 
         print("create_graph method triggered")
         app.unable_modes()
         app.graph = graph.copy()  # Create a copy of the graph
         app.colorer = GraphColorer(app.graph)  # Reset the colorer with the new graph
+        app.visualizer.positions = positions  # Set positions before creating graph
         app.visualizer.create_graph(app.graph)
-        app.visualizer.positions = None  # Reset positions for the new graph
 
     def create_bipartite_graph(self, graph, positions):
         print("create_bipartite_graph method triggered")
@@ -167,7 +167,20 @@ class App(QMainWindow):
     def display_sorted_edges(self):
         if hasattr(self.colorer, 'sorted_edges'):
             sorted_edges_str = "\n".join([f"{u}-{v}" for u, v in self.colorer.sorted_edges])
-            self.sorted_edges_label.setText(f"Sorted Edges:\n\n{sorted_edges_str}")
+            
+            # Group edges by color
+            color_classes = {}
+            for (u, v), color in self.colorer.edge_colors.items():
+                if color not in color_classes:
+                    color_classes[color] = []
+                color_classes[color].append(f"{u}-{v}")
+            
+            # Format color classes string
+            color_classes_str = "\n\nColor Classes:"
+            for color, edges in color_classes.items():
+                color_classes_str += f"\n{edges} = {color}({len(edges)})"
+            
+            self.sorted_edges_label.setText(f"Sorted Edges:\n\n{sorted_edges_str}{color_classes_str}")
         else:
             self.sorted_edges_label.setText("Sorted Edges:\n\nNot available")
 

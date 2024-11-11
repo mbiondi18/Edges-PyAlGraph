@@ -25,14 +25,26 @@ class GraphVisualizer(QWidget):
         if self.positions is None:
             self.positions = nx.spring_layout(graph, k=0.5, iterations=50)
         
-        nx.draw_networkx_nodes(graph, self.positions, ax=ax, node_size=300)
-        nx.draw_networkx_edges(graph, self.positions, ax=ax, edge_color='gray', width=1.5)  # Increased width to 1.5
-        nx.draw_networkx_labels(graph, self.positions, ax=ax, font_size=10)
-
+        # Draw nodes with white background and black border
+        nx.draw_networkx_nodes(graph, self.positions, ax=ax,
+                          node_color='white',
+                          edgecolors='black',
+                          node_size=500)  # Increased node size
+        
+        # Draw edges
+        nx.draw_networkx_edges(graph, self.positions, ax=ax)
+        
+        # Draw labels in black
+        labels = {node: str(node) for node in graph.nodes()}
+        nx.draw_networkx_labels(graph, self.positions, labels, ax=ax,
+                          font_size=8,
+                          font_color='black')
+        
+        ax.set_title("Graph")
         ax.set_axis_off()
-        ax.set_xlim(-1.2, 1.2)
-        ax.set_ylim(-1.2, 1.2)
-
+        # Set fixed limits to maintain consistent size
+        #ax.set_xlim(-1.2, 1.2)
+        #ax.set_ylim(-1.2, 1.2)
         self.figure.tight_layout()
         self.canvas.draw()
 
@@ -43,7 +55,11 @@ class GraphVisualizer(QWidget):
         if self.positions is None:
             self.positions = nx.spring_layout(graph)
         
-        nx.draw_networkx_nodes(graph, self.positions, ax=ax, node_size=300)
+        # Draw nodes with white background and black border
+        nx.draw_networkx_nodes(graph, self.positions, ax=ax, 
+                              node_color='white', 
+                              edgecolors='black',
+                              node_size=300)
         
         for edge, color in edge_colors.items():
             nx.draw_networkx_edges(graph, self.positions, edgelist=[edge], edge_color=color, ax=ax)

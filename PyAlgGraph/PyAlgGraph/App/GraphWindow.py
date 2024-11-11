@@ -105,7 +105,8 @@ class GraphWindow(QMainWindow):
 
     def create_graph(self):
         self.used_orders = []
-        self.app.create_graph(self.graph)
+        positions = self.get_positions()
+        self.app.create_graph(self.graph, positions)
         self.reset_graph()
         self.close()
 
@@ -274,3 +275,15 @@ class GraphWindow(QMainWindow):
                 self.select_order_mode = False
                 result = self.colorer.secuencial_coloring(self.graph, self.user_nodes)
                 self.print(result)
+
+    def get_positions(self):
+        positions = {}
+        for node, (x, y) in self.nodes.items():
+            # Normalize positions and adjust for inversion
+            x_norm = (x + 200) / self.scene.width()  # Add offset
+            y_norm = 1 - (y / self.scene.height())  # Invert y coordinate
+            # Scale positions to make graph larger
+            x_scaled = (x_norm - 0.5) * 2  # Scale x from -1 to 1
+            y_scaled = (y_norm - 0.5) * 2  # Scale y from -1 to 1
+            positions[node] = (x_scaled, y_scaled)
+        return positions
