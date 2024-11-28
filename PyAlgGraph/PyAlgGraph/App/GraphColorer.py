@@ -81,52 +81,61 @@ class GraphColorer:
         start_time = time.perf_counter()
         
         left_nodes, right_nodes = nx.bipartite.sets(graph)
-        print("Left nodes:", left_nodes)
-        print("Right nodes:", right_nodes)
-        
-        matching = {}
         matching_states = []
-
-        # Initial greedy matching
-        for left in left_nodes:
-            for right in graph.neighbors(left):
-                if left not in matching and right not in matching.values():
-                    matching[left] = right
-                    break
-        
-        print("Initial matching:", matching)
-        matching_states.append({"matching": matching.copy(), "augmenting_path": None})
+        edge_colors = {}
+        color_index = 0
 
         while True:
-            path = self.find_augmenting_path(graph, matching, left_nodes, right_nodes)
-            if not path:
+            matching = {}
+            # Initial greedy matching
+            for left in left_nodes:
+                for right in graph.neighbors(left):
+                    if left not in matching and right not in matching.values():
+                        matching[left] = right
+                        break
+            
+            if not matching:
                 break
+
+            matching_states.append({"matching": matching.copy(), "augmenting_path": None, "color": colors[color_index]})
+
+            while True:
+                path = self.find_augmenting_path(graph, matching, left_nodes, right_nodes)
+                if not path:
+                    break
+                
+                matching_states.append({"matching": matching.copy(), "augmenting_path": path, "color": colors[color_index]})
+                
+                # Update the matching
+                for i in range(0, len(path), 2):
+                    left, right = path[i], path[i+1]
+                    if left in matching:
+                        del matching[left]
+                    if right in matching.values():
+                        del matching[list(matching.keys())[list(matching.values()).index(right)]]
+                    matching[left] = right
             
-            print("Augmenting path found:", path)
+            matching_states.append({"matching": matching.copy(), "augmenting_path": None, "color": colors[color_index]})
             
-            # Store the state with the augmenting path
-            matching_states.append({"matching": matching.copy(), "augmenting_path": path})
+            # Color the matched edges
+            for left, right in matching.items():
+                edge_colors[(left, right)] = colors[color_index]
             
-            # Update the matching
-            for i in range(0, len(path), 2):
-                left, right = path[i], path[i+1]
-                if left in matching:
-                    del matching[left]
-                if right in matching.values():
-                    del matching[list(matching.keys())[list(matching.values()).index(right)]]
-                matching[left] = right
+            color_index += 1
+
+            # Remove matched edges from the graph
+            for left, right in matching.items():
+                graph.remove_edge(left, right)
             
-            print("Updated matching:", matching)
-            
-        # Add the final matching state without an augmenting path
-        matching_states.append({"matching": matching.copy(), "augmenting_path": None})
+            if not graph.edges():
+                break
         
         end_time = time.perf_counter()
         self.execution_time = end_time - start_time
-        self.colors_used = len(set(matching.values()))
+        self.colors_used = color_index
         self.algorithm_used = "Augmenting Path Algorithm"
         
-        return matching_states
+        return matching_states, edge_colors
 
     def find_augmenting_path(self, graph, matching, left_nodes, right_nodes):
         all_augmenting_paths = []

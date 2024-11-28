@@ -200,67 +200,89 @@ class App(QMainWindow):
     def color_bipartite_graph(self):
         if isinstance(self.graph, nx.Graph) and nx.is_bipartite(self.graph):
             print("Graph is bipartite")
-            left_nodes, right_nodes = nx.bipartite.sets(self.graph)
             
-            # Create positions if they don't exist
-            if self.visualizer.positions is None:
-                print("Creating new positions")
-                self.visualizer.positions = {}
-                max_count = max(len(left_nodes), len(right_nodes))
-                for i, node in enumerate(left_nodes):
-                    self.visualizer.positions[node] = (-0.45, 1 - (i / (max_count - 1)) if max_count > 1 else 0.5)
-                for i, node in enumerate(right_nodes):
-                    self.visualizer.positions[node] = (0.45, 1 - (i / (max_count - 1)) if max_count > 1 else 0.5)
+            # Check for connected components
+            components = list(nx.connected_components(self.graph))
+            if len(components) > 1:
+                print("Graph is disconnected, processing each component separately")
             else:
-                print("Using existing positions")
-            print("Graph nodes:", self.graph.nodes())
-            print("Graph edges:", self.graph.edges())
-            print("Positions:", self.visualizer.positions)
-            
-            # Draw the initial uncolored graph
-            self.visualizer.draw_bipartite_matching(self.graph, {}, set(), set(), pos=self.visualizer.positions)
-            
-            # Initialize colorer if not already done
-            if not hasattr(self, 'colorer'):
-                self.colorer = GraphColorer(self.graph)
+                print("Graph is connected")
 
-            try:
-                print("Starting maximal_matching_bipartite")
-                self.matching_states = self.colorer.maximal_matching_bipartite(self.graph)
-                print("Matching states:", self.matching_states)
-                self.current_step = 0
+            self.matching_states = []
+            self.edge_colors = {}
+            color_index = 0
+
+            for component in components:
+                subgraph = self.graph.subgraph(component).copy()
+                left_nodes, right_nodes = nx.bipartite.sets(subgraph)
                 
-                self.update_bipartite_visualization()
-                self.visualizer.draw_execution_time(self.colorer.execution_time)
+                # Create positions if they don't exist
+                if self.visualizer.positions is None:
+                    print("Creating new positions")
+                    self.visualizer.positions = {}
+                    max_count = max(len(left_nodes), len(right_nodes))
+                    for i, node in enumerate(left_nodes):
+                        self.visualizer.positions[node] = (-0.45, 1 - (i / (max_count - 1)) if max_count > 1 else 0.5)
+                    for i, node in enumerate(right_nodes):
+                        self.visualizer.positions[node] = (0.45, 1 - (i / (max_count - 1)) if max_count > 1 else 0.5)
+                else:
+                    print("Using existing positions")
+                print("Graph nodes:", subgraph.nodes())
+                print("Graph edges:", subgraph.edges())
+                print("Positions:", self.visualizer.positions)
                 
-                self.prev_button.setVisible(True)
-                self.next_button.setVisible(True)
-            except Exception as e:
-                print(f"Error in maximal_matching_bipartite: {e}")
-                import traceback
-                traceback.print_exc()
+                # Draw the initial uncolored graph
+                self.visualizer.draw_bipartite_matching(subgraph, {}, set(), set(), pos=self.visualizer.positions)
+                
+                # Initialize colorer if not already done
+                if not hasattr(self, 'colorer'):
+                    self.colorer = GraphColorer(subgraph)
+
+                try:
+                    print("Starting maximal_matching_bipartite")
+                    matching_states, edge_colors = self.colorer.maximal_matching_bipartite(subgraph)
+                    print("Matching states:", matching_states)
+                    self.matching_states.extend(matching_states)
+                    self.edge_colors.update(edge_colors)
+                    color_index += 1
+                except Exception as e:
+                    print(f"Error in maximal_matching_bipartite: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+            self.current_step = 0
+            self.update_bipartite_visualization()
+            self.visualizer.draw_execution_time(self.colorer.execution_time)
+            
+            self.prev_button.setVisible(True)
+            self.next_button.setVisible(True)
         else:
             print("The current graph is not bipartite or no graph is loaded.")
 
     def update_bipartite_visualization(self):
         if hasattr(self, 'matching_states') and self.matching_states:
             current_state = self.matching_states[self.current_step]
-            current_matching = current_state["matching"]
-            augmenting_path = current_state.get("augmenting_path")
-            
-            left_nodes, right_nodes = nx.bipartite.sets(self.graph)
-            unassigned_left = set(left_nodes) - set(current_matching.keys())
-            unassigned_right = set(right_nodes) - set(current_matching.values())
-            
-            self.visualizer.draw_bipartite_matching(
-                self.graph, 
-                current_matching, 
-                unassigned_left, 
-                unassigned_right, 
-                pos=self.visualizer.positions,
-                augmenting_path=augmenting_path
-            )
-            self.visualizer.update_step_info(self.current_step + 1, len(self.matching_states))
+            if isinstance(current_state, dict):
+                current_matching = current_state["matching"]
+                augmenting_path = current_state.get("augmenting_path")
+                color = current_state["color"]
+                
+                left_nodes, right_nodes = nx.bipartite.sets(self.graph)
+                unassigned_left = set(left_nodes) - set(current_matching.keys())
+                unassigned_right = set(right_nodes) - set(current_matching.values())
+                
+                self.visualizer.draw_bipartite_matching(
+                    self.graph, 
+                    current_matching, 
+                    unassigned_left, 
+                    unassigned_right, 
+                    pos=self.visualizer.positions,
+                    augmenting_path=augmenting_path,
+                    color=color
+                )
+                self.visualizer.update_step_info(self.current_step + 1, len(self.matching_states))
+            else:
+                print("Error: current_state is not a dictionary.")
         else:
             print("No matching states available.")
 
@@ -289,9 +311,3 @@ class App(QMainWindow):
         if self.current_step < len(self.matching_states) - 1:
             self.current_step += 1
             self.update_bipartite_visualization()
-
-    
-
-
-
-
