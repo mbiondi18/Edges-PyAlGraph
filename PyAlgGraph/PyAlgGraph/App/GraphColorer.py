@@ -97,14 +97,13 @@ class GraphColorer:
             if not matching:
                 break
 
+            # Store the initial state with unmatched nodes
             matching_states.append({"matching": matching.copy(), "augmenting_path": None, "color": colors[color_index]})
 
             while True:
                 path = self.find_augmenting_path(graph, matching, left_nodes, right_nodes)
                 if not path:
                     break
-                
-                matching_states.append({"matching": matching.copy(), "augmenting_path": path, "color": colors[color_index]})
                 
                 # Update the matching
                 for i in range(0, len(path), 2):
@@ -115,6 +114,7 @@ class GraphColorer:
                         del matching[list(matching.keys())[list(matching.values()).index(right)]]
                     matching[left] = right
             
+            # Store the final state after the augmenting path
             matching_states.append({"matching": matching.copy(), "augmenting_path": None, "color": colors[color_index]})
             
             # Color the matched edges

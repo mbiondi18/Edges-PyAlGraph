@@ -166,9 +166,12 @@ class GraphVisualizer(QWidget):
         unmatched_edges = [edge for edge in all_edges if edge not in matched_edges and edge[::-1] not in matched_edges]
 
         # Draw previously colored edges
-        if hasattr(self, 'previous_edge_colors'):
-            for edge, edge_color in self.previous_edge_colors.items():
-                nx.draw_networkx_edges(graph, pos, edgelist=[edge], edge_color=edge_color, ax=ax, width=2.0)
+        if hasattr(self, 'final_edge_colors'):
+            for edge, edge_color in self.final_edge_colors.items():
+                if edge in matched_edges or edge[::-1] in matched_edges:
+                    nx.draw_networkx_edges(graph, pos, edgelist=[edge], edge_color=edge_color, ax=ax, width=2.0)
+                else:
+                    nx.draw_networkx_edges(graph, pos, edgelist=[edge], edge_color='gray', style='dashed', ax=ax, width=1.0)
 
         # Draw unmatched edges
         nx.draw_networkx_edges(graph, pos, edgelist=unmatched_edges, edge_color='gray', style='dashed', ax=ax, width=1.0)
@@ -194,10 +197,15 @@ class GraphVisualizer(QWidget):
             nx.draw_networkx_edges(graph, pos, edgelist=matched_edges, edge_color=color, ax=ax, width=2.0)
 
         # Store the colors of the current matched edges
-        if not hasattr(self, 'previous_edge_colors'):
-            self.previous_edge_colors = {}
+        if not hasattr(self, 'final_edge_colors'):
+            self.final_edge_colors = {}
         for edge in matched_edges:
-            self.previous_edge_colors[edge] = color
+            self.final_edge_colors[edge] = color
+
+        # Remove edges that are no longer part of the current matching
+        for edge in list(self.final_edge_colors.keys()):
+            if edge not in matched_edges and edge[::-1] not in matched_edges:
+                del self.final_edge_colors[edge]
 
         # Draw labels
         labels = {node: node.split('_')[1] for node in graph.nodes()}

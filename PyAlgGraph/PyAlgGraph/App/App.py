@@ -271,6 +271,16 @@ class App(QMainWindow):
                 unassigned_left = set(left_nodes) - set(current_matching.keys())
                 unassigned_right = set(right_nodes) - set(current_matching.values())
                 
+                # Update edge colors
+                if not hasattr(self, 'cumulative_edge_colors'):
+                    self.cumulative_edge_colors = {}
+
+                for edge in self.graph.edges():
+                    if edge in current_matching.items() or (edge[1], edge[0]) in current_matching.items():
+                        self.cumulative_edge_colors[edge] = color
+                    elif edge not in self.cumulative_edge_colors:
+                        self.cumulative_edge_colors[edge] = 'gray'  # Uncolored edges
+
                 self.visualizer.draw_bipartite_matching(
                     self.graph, 
                     current_matching, 
