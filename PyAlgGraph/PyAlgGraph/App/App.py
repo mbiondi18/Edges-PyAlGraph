@@ -245,6 +245,16 @@ class App(QMainWindow):
                     self.matching_states.extend(matching_states)
                     self.edge_colors.update(edge_colors)
                     color_index += 1
+
+                    # Add a final state that shows all colors together
+                    final_state = {
+                        "matching": self.edge_colors,  # Use all colored edges
+                        "augmenting_path": None,
+                        "color": "final",  # Special marker for final state
+                        "show_all_colors": True  # New flag to indicate final state
+                    }
+                    self.matching_states.append(final_state)
+                    
                 except Exception as e:
                     print(f"Error in maximal_matching_bipartite: {e}")
                     import traceback
@@ -266,7 +276,23 @@ class App(QMainWindow):
                 current_matching = current_state["matching"]
                 augmenting_path = current_state.get("augmenting_path")
                 color = current_state["color"]
+                show_all_colors = current_state.get("show_all_colors", False)
                 
+                # Handle the final state differently
+                if show_all_colors:
+                    # For the final state, we pass the state directly
+                    self.visualizer.draw_bipartite_matching(
+                        self.graph,
+                        current_state,  # Pass the entire state
+                        set(),  # Empty set for unassigned_left
+                        set(),  # Empty set for unassigned_right
+                        pos=self.visualizer.positions,
+                        augmenting_path=None,
+                        color="final"
+                    )
+                    return
+
+                # Regular state handling
                 left_nodes, right_nodes = nx.bipartite.sets(self.graph)
                 unassigned_left = set(left_nodes) - set(current_matching.keys())
                 unassigned_right = set(right_nodes) - set(current_matching.values())

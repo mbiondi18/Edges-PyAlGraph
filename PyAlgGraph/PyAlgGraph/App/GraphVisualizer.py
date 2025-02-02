@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QWidget, QLabel
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import networkx as nx
+from matplotlib.lines import Line2D
 
 class GraphVisualizer(QWidget):
     def __init__(self, parent=None):
@@ -144,9 +145,10 @@ class GraphVisualizer(QWidget):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         
+        # Draw nodes
         left_nodes = [n for n in graph.nodes() if n.startswith('left_')]
         right_nodes = [n for n in graph.nodes() if n.startswith('right_')]
-
+        
         # Adjust node positions
         max_nodes = max(len(left_nodes), len(right_nodes))
         for i, node in enumerate(left_nodes):
@@ -158,56 +160,80 @@ class GraphVisualizer(QWidget):
         node_size = 1000
         nx.draw_networkx_nodes(graph, pos, nodelist=left_nodes, node_color='lightblue', ax=ax, node_size=node_size)
         nx.draw_networkx_nodes(graph, pos, nodelist=right_nodes, node_color='lightgreen', ax=ax, node_size=node_size)
-        nx.draw_networkx_nodes(graph, pos, nodelist=list(unassigned_left) + list(unassigned_right), node_color='red', ax=ax, node_size=node_size)
+        
+        # Only draw unassigned nodes in red if not in final state
+        if not (isinstance(assignments, dict) and assignments.get("show_all_colors", False)):
+            nx.draw_networkx_nodes(graph, pos, nodelist=list(unassigned_left) + list(unassigned_right), 
+                                 node_color='red', ax=ax, node_size=node_size)
 
-        # Draw edges
-        all_edges = list(graph.edges())
-        matched_edges = [(left, right) for left, right in assignments.items()]
-        unmatched_edges = [edge for edge in all_edges if edge not in matched_edges and edge[::-1] not in matched_edges]
-
-        # Draw previously colored edges
-        if hasattr(self, 'final_edge_colors'):
-            for edge, edge_color in self.final_edge_colors.items():
-                if edge in matched_edges or edge[::-1] in matched_edges:
-                    nx.draw_networkx_edges(graph, pos, edgelist=[edge], edge_color=edge_color, ax=ax, width=2.0)
-                else:
-                    nx.draw_networkx_edges(graph, pos, edgelist=[edge], edge_color='gray', style='dashed', ax=ax, width=1.0)
-
-        # Draw unmatched edges
-        nx.draw_networkx_edges(graph, pos, edgelist=unmatched_edges, edge_color='gray', style='dashed', ax=ax, width=1.0)
-
-        if augmenting_path:
-            # Create path edges
-            path_edges = list(zip(augmenting_path[:-1], augmenting_path[1:]))
+        # Check if this is the final state showing all colors
+        if isinstance(assignments, dict) and assignments.get("show_all_colors", False):
+            # Draw all edges with their final colors
+            if hasattr(self, 'final_edge_colors'):
+                for edge, edge_color in self.final_edge_colors.items():
+                    try:
+                        nx.draw_networkx_edges(graph, pos, edgelist=[edge], 
+                                             edge_color=edge_color, 
+                                             ax=ax, 
+                                             width=2.5)
+                    except KeyError:
+                        # If edge is reversed, try the other direction
+                        reversed_edge = (edge[1], edge[0])
+                        nx.draw_networkx_edges(graph, pos, edgelist=[reversed_edge], 
+                                             edge_color=edge_color, 
+                                             ax=ax, 
+                                             width=2.5)
             
-            # Separate matched edges into those in the augmenting path and those not
-            matched_edges_in_path = [edge for edge in matched_edges if edge in path_edges or edge[::-1] in path_edges]
-            matched_edges_not_in_path = [edge for edge in matched_edges if edge not in matched_edges_in_path and edge[::-1] not in matched_edges_in_path]
-            
-            # Draw matched edges not in path
-            nx.draw_networkx_edges(graph, pos, edgelist=matched_edges_not_in_path, edge_color=color, ax=ax, width=2.0)
-            
-            # Draw augmenting path with blue dotted lines first
-            nx.draw_networkx_edges(graph, pos, edgelist=path_edges, edge_color='b', ax=ax, width=1.5, style='--')
-            
-            # Draw matched edges in path with orange color last (on top)
-            nx.draw_networkx_edges(graph, pos, edgelist=matched_edges_in_path, edge_color='orange', ax=ax, width=3.5)
+            # Add legend
+            unique_colors = sorted(set(self.final_edge_colors.values()))
+            legend_elements = [Line2D([0], [0], color=c, label=f'Iteration {i+1}')
+                             for i, c in enumerate(unique_colors)]
+            ax.legend(handles=legend_elements, loc='upper right')
+            ax.set_title("Final Coloring - All Iterations Combined", pad=20)
         else:
-            # Draw all matched edges in the specified color if no augmenting path
-            nx.draw_networkx_edges(graph, pos, edgelist=matched_edges, edge_color=color, ax=ax, width=2.0)
+            # Original drawing code for intermediate states
+            all_edges = list(graph.edges())
+            matched_edges = [(left, right) for left, right in assignments.items()]
+            unmatched_edges = [edge for edge in all_edges if edge not in matched_edges and edge[::-1] not in matched_edges]
 
-        # Store the colors of the current matched edges
-        if not hasattr(self, 'final_edge_colors'):
-            self.final_edge_colors = {}
-        for edge in matched_edges:
-            self.final_edge_colors[edge] = color
+            # Draw previously colored edges
+            if hasattr(self, 'final_edge_colors'):
+                for edge, edge_color in self.final_edge_colors.items():
+                    if edge in matched_edges or edge[::-1] in matched_edges:
+                        nx.draw_networkx_edges(graph, pos, edgelist=[edge], edge_color=edge_color, ax=ax, width=2.0)
+                    else:
+                        nx.draw_networkx_edges(graph, pos, edgelist=[edge], edge_color='gray', style='dashed', ax=ax, width=1.0)
 
-        # Remove edges that are no longer part of the current matching
-        for edge in list(self.final_edge_colors.keys()):
-            if edge not in matched_edges and edge[::-1] not in matched_edges:
-                del self.final_edge_colors[edge]
+            # Draw unmatched edges
+            nx.draw_networkx_edges(graph, pos, edgelist=unmatched_edges, edge_color='gray', style='dashed', ax=ax, width=1.0)
 
-        # Draw labels
+            if augmenting_path:
+                # Create path edges
+                path_edges = list(zip(augmenting_path[:-1], augmenting_path[1:]))
+                
+                # Separate matched edges into those in the augmenting path and those not
+                matched_edges_in_path = [edge for edge in matched_edges if edge in path_edges or edge[::-1] in path_edges]
+                matched_edges_not_in_path = [edge for edge in matched_edges if edge not in matched_edges_in_path and edge[::-1] not in matched_edges_in_path]
+                
+                # Draw matched edges not in path
+                nx.draw_networkx_edges(graph, pos, edgelist=matched_edges_not_in_path, edge_color=color, ax=ax, width=2.0)
+                
+                # Draw augmenting path with blue dotted lines first
+                nx.draw_networkx_edges(graph, pos, edgelist=path_edges, edge_color='b', ax=ax, width=1.5, style='--')
+                
+                # Draw matched edges in path with orange color last (on top)
+                nx.draw_networkx_edges(graph, pos, edgelist=matched_edges_in_path, edge_color='orange', ax=ax, width=3.5)
+            else:
+                # Draw all matched edges in the specified color if no augmenting path
+                nx.draw_networkx_edges(graph, pos, edgelist=matched_edges, edge_color=color, ax=ax, width=2.0)
+
+            # Store the colors of the current matched edges
+            if not hasattr(self, 'final_edge_colors'):
+                self.final_edge_colors = {}
+            for edge in matched_edges:
+                self.final_edge_colors[edge] = color
+
+        # Common drawing code for both cases
         labels = {node: node.split('_')[1] for node in graph.nodes()}
         nx.draw_networkx_labels(graph, pos, labels, ax=ax, font_size=10, font_color='white')
 
