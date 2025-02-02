@@ -168,6 +168,13 @@ class App(QMainWindow):
         if hasattr(self.colorer, 'sorted_edges'):
             sorted_edges_str = "\n".join([f"{u}-{v}" for u, v in self.colorer.sorted_edges])
             
+            # Add explanation of the algorithm
+            algorithm_explanation = "\n\nAlgorithm Process:\n" + \
+                "1. The algorithm starts with the vertex of highest degree\n" + \
+                "2. Colors all edges connected to this vertex\n" + \
+                "3. Continues with the next vertex of highest degree among the remaining vertices\n" + \
+                "4. Repeats until all edges are colored\n"
+            
             # Group edges by color
             color_classes = {}
             for (u, v), color in self.colorer.edge_colors.items():
@@ -176,11 +183,13 @@ class App(QMainWindow):
                 color_classes[color].append(f"{u}-{v}")
             
             # Format color classes string
-            color_classes_str = "\n\nColor Classes:"
+            color_classes_str = "\nColor Classes:"
             for color, edges in color_classes.items():
                 color_classes_str += f"\n{edges} = {color}({len(edges)})"
             
-            self.sorted_edges_label.setText(f"Sorted Edges:\n\n{sorted_edges_str}{color_classes_str}")
+            self.sorted_edges_label.setText(
+                f"Sorted Edges:\n\n{sorted_edges_str}{algorithm_explanation}{color_classes_str}"
+            )
         else:
             self.sorted_edges_label.setText("Sorted Edges:\n\nNot available")
 

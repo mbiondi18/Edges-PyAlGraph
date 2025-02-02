@@ -194,18 +194,29 @@ class GraphVisualizer(QWidget):
             # Original drawing code for intermediate states
             all_edges = list(graph.edges())
             matched_edges = [(left, right) for left, right in assignments.items()]
-            unmatched_edges = [edge for edge in all_edges if edge not in matched_edges and edge[::-1] not in matched_edges]
+            
+            # Only show dotted lines for edges that haven't been colored in any iteration
+            if hasattr(self, 'final_edge_colors'):
+                unmatched_edges = [edge for edge in all_edges 
+                                 if edge not in matched_edges 
+                                 and edge[::-1] not in matched_edges
+                                 and edge not in self.final_edge_colors
+                                 and edge[::-1] not in self.final_edge_colors]
+            else:
+                unmatched_edges = [edge for edge in all_edges 
+                                 if edge not in matched_edges 
+                                 and edge[::-1] not in matched_edges]
 
-            # Draw previously colored edges
+            # Draw previously colored edges (without dotted lines for colored edges)
             if hasattr(self, 'final_edge_colors'):
                 for edge, edge_color in self.final_edge_colors.items():
                     if edge in matched_edges or edge[::-1] in matched_edges:
-                        nx.draw_networkx_edges(graph, pos, edgelist=[edge], edge_color=edge_color, ax=ax, width=2.0)
-                    else:
-                        nx.draw_networkx_edges(graph, pos, edgelist=[edge], edge_color='gray', style='dashed', ax=ax, width=1.0)
+                        nx.draw_networkx_edges(graph, pos, edgelist=[edge], 
+                                             edge_color=edge_color, ax=ax, width=2.0)
 
-            # Draw unmatched edges
-            nx.draw_networkx_edges(graph, pos, edgelist=unmatched_edges, edge_color='gray', style='dashed', ax=ax, width=1.0)
+            # Draw unmatched edges (only those that haven't been colored in any iteration)
+            nx.draw_networkx_edges(graph, pos, edgelist=unmatched_edges, 
+                                 edge_color='gray', style='dashed', ax=ax, width=1.0)
 
             if augmenting_path:
                 # Create path edges
