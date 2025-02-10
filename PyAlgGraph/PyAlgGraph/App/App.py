@@ -257,12 +257,15 @@ class App(QMainWindow):
 
                     # Add a final state that shows all colors together
                     final_state = {
-                        "matching": self.edge_colors,  # Use all colored edges
+                        "matching": self.edge_colors,
                         "augmenting_path": None,
-                        "color": "final",  # Special marker for final state
-                        "show_all_colors": True  # New flag to indicate final state
+                        "color": "final",
+                        "show_all_colors": True
                     }
                     self.matching_states.append(final_state)
+                    
+                    # Hide the right sidebar initially
+                    self.right_sidebar.setVisible(False)
                     
                 except Exception as e:
                     print(f"Error in maximal_matching_bipartite: {e}")
@@ -292,14 +295,20 @@ class App(QMainWindow):
                     # For the final state, we pass the state directly
                     self.visualizer.draw_bipartite_matching(
                         self.graph,
-                        current_state,  # Pass the entire state
-                        set(),  # Empty set for unassigned_left
-                        set(),  # Empty set for unassigned_right
+                        current_state,
+                        set(),
+                        set(),
                         pos=self.visualizer.positions,
                         augmenting_path=None,
                         color="final"
                     )
+                    # Only show matching groups in the final state
+                    self.display_matching_groups()
+                    self.right_sidebar.setVisible(True)
                     return
+                else:
+                    # Hide the right sidebar for non-final states
+                    self.right_sidebar.setVisible(False)
 
                 # Regular state handling
                 left_nodes, right_nodes = nx.bipartite.sets(self.graph)
@@ -356,3 +365,39 @@ class App(QMainWindow):
         if self.current_step < len(self.matching_states) - 1:
             self.current_step += 1
             self.update_bipartite_visualization()
+
+    def display_matching_groups(self):
+        if hasattr(self, 'matching_states'):
+            # Create text for matching groups
+            matching_text = "Matching Groups by Iteration:\n\n"
+            
+            # Track the last seen matching for each iteration color
+            color_matchings = {}
+            color_order = []  # Keep track of the order colors appear
+            
+            # Process states in order, keeping only the last matching for each color
+            for state in self.matching_states[:-1]:  # Skip final state
+                if isinstance(state, dict) and "matching" in state:
+                    color = state["color"]
+                    if color not in color_matchings:
+                        color_matchings[color] = state["matching"]
+                        color_order.append(color)  # Add color to order list when first seen
+                    else:
+                        # Update with the last matching for this color
+                        color_matchings[color] = state["matching"]
+            
+            # Display matchings in the order colors appeared
+            for i, color in enumerate(color_order):
+                matching = color_matchings[color]
+                matching_text += f"Iteration {i+1}:\n"
+                # Sort the matches for consistent display
+                sorted_matches = sorted([
+                    (f"L{left.split('_')[1]}", f"R{right.split('_')[1]}")
+                    for left, right in matching.items()
+                ])
+                for left, right in sorted_matches:
+                    matching_text += f"{left}-{right}\n"
+                matching_text += "\n"  # Add space between iterations
+            
+            # Update the sorted_edges_label with matching groups
+            self.sorted_edges_label.setText(matching_text)

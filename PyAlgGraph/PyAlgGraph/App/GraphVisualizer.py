@@ -170,26 +170,25 @@ class GraphVisualizer(QWidget):
         if isinstance(assignments, dict) and assignments.get("show_all_colors", False):
             # Draw all edges with their final colors
             if hasattr(self, 'final_edge_colors'):
-                for edge, edge_color in self.final_edge_colors.items():
+                # Get unique colors in the order they were added
+                unique_colors = sorted(set(self.final_edge_colors.values()))
+                
+                # Draw edges in order of iterations (removed legend creation)
+                for edge, edge_color in sorted(self.final_edge_colors.items(), 
+                                             key=lambda x: unique_colors.index(x[1])):
                     try:
                         nx.draw_networkx_edges(graph, pos, edgelist=[edge], 
                                              edge_color=edge_color, 
                                              ax=ax, 
                                              width=2.5)
                     except KeyError:
-                        # If edge is reversed, try the other direction
                         reversed_edge = (edge[1], edge[0])
                         nx.draw_networkx_edges(graph, pos, edgelist=[reversed_edge], 
                                              edge_color=edge_color, 
                                              ax=ax, 
                                              width=2.5)
-            
-            # Add legend
-            unique_colors = sorted(set(self.final_edge_colors.values()))
-            legend_elements = [Line2D([0], [0], color=c, label=f'Iteration {i+1}')
-                             for i, c in enumerate(unique_colors)]
-            ax.legend(handles=legend_elements, loc='upper right')
-            ax.set_title("Final Coloring - All Iterations Combined", pad=20)
+                
+                ax.set_title("Final Coloring - All Iterations Combined", pad=20)
         else:
             # Original drawing code for intermediate states
             all_edges = list(graph.edges())
