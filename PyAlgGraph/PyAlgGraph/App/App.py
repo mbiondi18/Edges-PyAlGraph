@@ -55,9 +55,13 @@ class App(QMainWindow):
         app.paint_bipartite_graph_button.clicked.connect(app.open_bipartite_graph_window)
         app.paint_bipartite_graph_button.setFixedSize(200, 60)
         sidebar_layout.addWidget(app.paint_bipartite_graph_button)
-        # Color Bipartite Graph button
-        app.color_bipartite_graph_button = QPushButton('Color Bipartite Graph')
-        app.color_bipartite_graph_button.clicked.connect(app.color_bipartite_graph)
+        # Replace the Color Bipartite Graph button with a dropdown
+        app.color_bipartite_graph_button = QComboBox()
+        app.color_bipartite_graph_button.addItems([
+            "Color Bipartite Graph (Step by Step)", 
+            "Color Bipartite Graph (Final State)"
+        ])
+        app.color_bipartite_graph_button.activated[str].connect(app.on_color_bipartite_graph_selected)
         app.color_bipartite_graph_button.setFixedSize(200, 60)
         sidebar_layout.addWidget(app.color_bipartite_graph_button)
         # Add four empty spaces
@@ -205,6 +209,12 @@ class App(QMainWindow):
         app.unable_modes()
         app.visualizer.draw_graph(app.graph, edge_colors)
         app.visualizer.draw_execution_time(app.colorer.execution_time)
+
+    def on_color_bipartite_graph_selected(self, text):
+        if text == "Color Bipartite Graph (Step by Step)":
+            self.color_bipartite_graph()
+        else:  # Final State
+            self.color_bipartite_graph_final()
 
     def color_bipartite_graph(self):
         if isinstance(self.graph, nx.Graph) and nx.is_bipartite(self.graph):
@@ -432,3 +442,77 @@ class App(QMainWindow):
             
             # Update the sorted_edges_label with matching groups
             self.sorted_edges_label.setText(matching_text)
+
+    def color_bipartite_graph_final(self):
+        if isinstance(self.graph, nx.Graph) and nx.is_bipartite(self.graph):
+            try:
+                matching_states, edge_colors = self.colorer.maximal_matching_bipartite(self.graph)
+                
+                # Process all states to build up the final edge colors
+                self.visualizer.final_edge_colors = {}  # Store in visualizer instead
+                current_color = None
+                iteration_matchings = {}
+                color_order = []  # Keep track of color order
+                
+                # Process states to collect all edge colors
+                for state in matching_states:
+                    if isinstance(state, dict):
+                        color = state["color"]
+                        matching = state["matching"]
+                        
+                        # If this is a new color (new iteration)
+                        if color != current_color:
+                            if color not in color_order:  # Add color to order if new
+                                color_order.append(color)
+                            current_color = color
+                            iteration_matchings[color] = matching
+                        else:
+                            # Update the matching for current color
+                            iteration_matchings[color] = matching
+                
+                # Build final edge colors from iteration matchings
+                for color, matching in iteration_matchings.items():
+                    for left, right in matching.items():
+                        self.visualizer.final_edge_colors[(left, right)] = color
+                
+                # Create matching text for display
+                matching_text = "Matching Groups by Iteration:\n\n"
+                for i, color in enumerate(color_order):
+                    if color in iteration_matchings:
+                        matching = iteration_matchings[color]
+                        matching_text += f"Iteration {i+1}:\n"
+                        # Sort the matches for consistent display
+                        sorted_matches = sorted([
+                            (f"L{left.split('_')[1]}", f"R{right.split('_')[1]}")
+                            for left, right in matching.items()
+                        ])
+                        for left, right in sorted_matches:
+                            matching_text += f"{left}-{right}\n"
+                        matching_text += "\n"
+                
+                # Create the final state with all colors
+                self.matching_states = [{
+                    "matching": edge_colors,  # Use original edge_colors here
+                    "augmenting_path": None,
+                    "color": "final",
+                    "show_all_colors": True
+                }]
+                
+                self.current_step = 0
+                self.update_bipartite_visualization()
+                self.visualizer.draw_execution_time(self.colorer.execution_time)
+                
+                # Hide navigation buttons
+                self.prev_button.setVisible(False)
+                self.next_button.setVisible(False)
+                
+                # Update and show matching groups
+                self.sorted_edges_label.setText(matching_text)
+                self.right_sidebar.setVisible(True)
+                
+            except Exception as e:
+                print(f"Error in maximal_matching_bipartite: {e}")
+                import traceback
+                traceback.print_exc()
+        else:
+            print("The current graph is not bipartite or no graph is loaded.")
