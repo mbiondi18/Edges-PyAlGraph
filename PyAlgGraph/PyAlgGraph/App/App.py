@@ -17,6 +17,7 @@ from BipartiteGraphWindow import BipartiteGraphWindow
 from UserOrderDialog import UserOrderDialog
 import networkx as nx
 from StatisticsWindow import StatisticsWindow
+from AlgorithmExplanationWindow import AlgorithmExplanationWindow
 
 class App(QMainWindow):
     def __init__(app):
@@ -109,6 +110,8 @@ class App(QMainWindow):
 
         app.right_sidebar = right_sidebar  # Store the reference to right_sidebar
         app.right_sidebar.setVisible(False)  # Hide by default
+
+        app.right_sidebar_layout = right_sidebar_layout  # Store the reference
 
         main_layout.addWidget(right_sidebar)
 
@@ -442,6 +445,17 @@ class App(QMainWindow):
             
             # Update the sorted_edges_label with matching groups
             self.sorted_edges_label.setText(matching_text)
+            
+            # Create and show the explanation button if it doesn't exist
+            if not hasattr(self, 'explanation_button'):
+                self.explanation_button = QPushButton("Show Algorithm Explanation")
+                self.explanation_button.clicked.connect(self.show_algorithm_explanation)
+                self.right_sidebar_layout.addWidget(self.explanation_button)
+            self.explanation_button.setVisible(True)
+
+    def show_algorithm_explanation(self):
+        explanation_window = AlgorithmExplanationWindow(self)
+        explanation_window.exec_()
 
     def color_bipartite_graph_final(self):
         if isinstance(self.graph, nx.Graph) and nx.is_bipartite(self.graph):
