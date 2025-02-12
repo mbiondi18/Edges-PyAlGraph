@@ -251,11 +251,42 @@ class App(QMainWindow):
                     print("Starting maximal_matching_bipartite")
                     matching_states, edge_colors = self.colorer.maximal_matching_bipartite(subgraph)
                     print("Matching states:", matching_states)
-                    self.matching_states.extend(matching_states)
-                    self.edge_colors.update(edge_colors)
-                    color_index += 1
-
-                    # Add a final state that shows all colors together
+                    
+                    # Create new simplified states sequence
+                    self.matching_states = []
+                    
+                    # Track colors and matchings for each iteration
+                    current_color = None
+                    iteration_matchings = {}
+                    
+                    # Process the original states to create our simplified sequence
+                    for state in matching_states:
+                        if isinstance(state, dict):
+                            color = state["color"]
+                            
+                            # If this is a new color (new iteration)
+                            if color != current_color:
+                                if current_color is None:
+                                    # First iteration - include augmenting path state
+                                    if state.get("augmenting_path"):
+                                        self.matching_states.append(state)
+                                current_color = color
+                                iteration_matchings[color] = state["matching"]
+                            else:
+                                # Update the matching for current color
+                                iteration_matchings[color] = state["matching"]
+                    
+                    # Add final state for each iteration
+                    for color, matching in iteration_matchings.items():
+                        final_iteration_state = {
+                            "matching": matching,
+                            "augmenting_path": None,
+                            "color": color,
+                            "show_all_colors": False
+                        }
+                        self.matching_states.append(final_iteration_state)
+                    
+                    # Add the final state showing all colors
                     final_state = {
                         "matching": self.edge_colors,
                         "augmenting_path": None,
@@ -272,12 +303,12 @@ class App(QMainWindow):
                     import traceback
                     traceback.print_exc()
 
-            self.current_step = 0
-            self.update_bipartite_visualization()
-            self.visualizer.draw_execution_time(self.colorer.execution_time)
-            
-            self.prev_button.setVisible(True)
-            self.next_button.setVisible(True)
+                self.current_step = 0
+                self.update_bipartite_visualization()
+                self.visualizer.draw_execution_time(self.colorer.execution_time)
+                
+                self.prev_button.setVisible(True)
+                self.next_button.setVisible(True)
         else:
             print("The current graph is not bipartite or no graph is loaded.")
 
