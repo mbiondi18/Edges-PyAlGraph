@@ -14,35 +14,44 @@ class GraphColorer:
     def secuencial_coloring(self, graph: nx.Graph, edges: list):
         start_time = time.time()
         self.edge_colors = {}  # Store edge colors as class attribute
-
-        def edge_weight(edge):
-            return graph.degree(edge[0]) + graph.degree(edge[1])
-
-        # Sort edges based on the sum of degrees of incident vertices (descending order)
-        self.sorted_edges = sorted(edges, key=edge_weight, reverse=True)
-
-        for u, v in self.sorted_edges:
-            available_colors = [True] * len(colors)
-
-            # Check colors of adjacent edges
-            for w in graph.neighbors(u):
-                edge = (u, w) if u < w else (w, u)
-                if edge in self.edge_colors:
-                    color_index = colors.index(self.edge_colors[edge])
-                    available_colors[color_index] = False
-            for w in graph.neighbors(v):
-                edge = (v, w) if v < w else (w, v)
-                if edge in self.edge_colors:
-                    color_index = colors.index(self.edge_colors[edge])
-                    available_colors[color_index] = False
-
-            # Assign the first available color
-            for i, is_available in enumerate(available_colors):
-                if is_available:
-                    edge_color = colors[i]
-                    self.edge_colors[(u, v)] = edge_color
-                    break
-
+        
+        # Get vertices sorted by degree (highest to lowest)
+        vertices = sorted(graph.nodes(), key=lambda x: graph.degree(x), reverse=True)
+        self.sorted_edges = []  # Will store edges in order of coloring
+        
+        # Process vertices in order of decreasing degree
+        for vertex in vertices:
+            # Get all uncolored edges connected to this vertex
+            vertex_edges = [(vertex, neighbor) for neighbor in graph.neighbors(vertex)
+                           if (vertex, neighbor) not in self.edge_colors 
+                           and (neighbor, vertex) not in self.edge_colors]
+            
+            # Color each uncolored edge connected to this vertex
+            for u, v in vertex_edges:
+                # Ensure consistent edge representation (smaller vertex first)
+                edge = (u, v) if u < v else (v, u)
+                if edge not in self.edge_colors:
+                    available_colors = [True] * len(colors)
+                    
+                    # Check colors of adjacent edges
+                    for w in graph.neighbors(u):
+                        adj_edge = (u, w) if u < w else (w, u)
+                        if adj_edge in self.edge_colors:
+                            color_index = colors.index(self.edge_colors[adj_edge])
+                            available_colors[color_index] = False
+                    for w in graph.neighbors(v):
+                        adj_edge = (v, w) if v < w else (w, v)
+                        if adj_edge in self.edge_colors:
+                            color_index = colors.index(self.edge_colors[adj_edge])
+                            available_colors[color_index] = False
+                    
+                    # Assign the first available color
+                    for i, is_available in enumerate(available_colors):
+                        if is_available:
+                            self.edge_colors[edge] = colors[i]
+                            self.sorted_edges.append(edge)
+                            break
+        
         end_time = time.time()
         self.execution_time = end_time - start_time
         self.colors_used = len(set(self.edge_colors.values()))

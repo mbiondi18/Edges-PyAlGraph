@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (
     QVBoxLayout, QMainWindow, QPushButton, QGraphicsScene, QGraphicsView, 
     QGraphicsEllipseItem, QComboBox, QGraphicsTextItem, QLabel, QGraphicsLineItem, 
-    QWidget, QHBoxLayout, QDialog, QMessageBox  # Add this import at the top of the file
+    QWidget, QHBoxLayout, QDialog, QMessageBox, QScrollArea  # Add this import at the top of the file
 )
 from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QPen, QBrush, QPainter, QFont
@@ -97,21 +97,36 @@ class App(QMainWindow):
 
         main_layout.addWidget(visualizer_container, 1)  # Give it a stretch factor of 1
 
-        # Create right sidebar for sorted edges
+        # Create right sidebar for sorted edges with scroll area
         right_sidebar = QWidget()
-        right_sidebar_layout = QVBoxLayout(right_sidebar)
         right_sidebar.setFixedWidth(220)
-
+        
+        # Create a scroll area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
+        # Create a widget to hold the content
+        scroll_content = QWidget()
+        right_sidebar_layout = QVBoxLayout(scroll_content)
+        
+        # Add the labels to the scroll content
         app.sorted_edges_label = QLabel("Sorted Edges:")
         app.sorted_edges_label.setAlignment(Qt.AlignTop)
         app.sorted_edges_label.setWordWrap(True)
         right_sidebar_layout.addWidget(app.sorted_edges_label)
-        right_sidebar_layout.addStretch(1)
-
-        app.right_sidebar = right_sidebar  # Store the reference to right_sidebar
-        app.right_sidebar.setVisible(False)  # Hide by default
-
-        app.right_sidebar_layout = right_sidebar_layout  # Store the reference
+        
+        # Set up the scroll area
+        scroll.setWidget(scroll_content)
+        
+        # Add scroll area to right sidebar
+        right_sidebar_vbox = QVBoxLayout(right_sidebar)
+        right_sidebar_vbox.addWidget(scroll)
+        right_sidebar_vbox.setContentsMargins(0, 0, 0, 0)
+        
+        app.right_sidebar = right_sidebar
+        app.right_sidebar.setVisible(False)
+        app.right_sidebar_layout = right_sidebar_layout
 
         main_layout.addWidget(right_sidebar)
 
@@ -155,11 +170,16 @@ class App(QMainWindow):
     def on_secuencial_coloring_button_activated(self, text):
         if text == "Secuencial coloring default order":
             self.secuencial_coloring(self.graph.edges())
-            self.right_sidebar.setVisible(True)  # Show the right sidebar
+            self.right_sidebar.setVisible(True)
         elif text == "Secuencial coloring user order":
+            # Store the edges in order of creation for user order
+            self.colorer.sorted_edges = list(self.graph.edges())
             edge_colors = self.colorer.sequential_user_order_coloring(self.graph)
             self.print(edge_colors)
-            self.right_sidebar.setVisible(False)  # Hide the right sidebar
+            self.display_sorted_edges()
+            self.display_algorithm_process("user")
+            self.display_color_classes(edge_colors)
+            self.right_sidebar.setVisible(True)
 
     def bipartite_coloring(app):
         edge_colors = app.colorer.bipartite_coloring(app.graph)
@@ -170,33 +190,15 @@ class App(QMainWindow):
         edge_colors = app.colorer.secuencial_coloring(app.graph, edges)
         app.print(edge_colors)
         app.display_sorted_edges()
+        app.display_algorithm_process("default")
+        app.display_color_classes(edge_colors)
+        app.right_sidebar.setVisible(True)
 
     def display_sorted_edges(self):
         if hasattr(self.colorer, 'sorted_edges'):
-            sorted_edges_str = "\n".join([f"{u}-{v}" for u, v in self.colorer.sorted_edges])
-            
-            # Add explanation of the algorithm
-            algorithm_explanation = "\n\nAlgorithm Process:\n" + \
-                "1. The algorithm starts with the vertex of highest degree\n" + \
-                "2. Colors all edges connected to this vertex\n" + \
-                "3. Continues with the next vertex of highest degree among the remaining vertices\n" + \
-                "4. Repeats until all edges are colored\n"
-            
-            # Group edges by color
-            color_classes = {}
-            for (u, v), color in self.colorer.edge_colors.items():
-                if color not in color_classes:
-                    color_classes[color] = []
-                color_classes[color].append(f"{u}-{v}")
-            
-            # Format color classes string
-            color_classes_str = "\nColor Classes:"
-            for color, edges in color_classes.items():
-                color_classes_str += f"\n{edges} = {color}({len(edges)})"
-            
-            self.sorted_edges_label.setText(
-                f"Sorted Edges:\n\n{sorted_edges_str}{algorithm_explanation}{color_classes_str}"
-            )
+            sorted_edges_str = "Sorted Edges:\n\n"
+            sorted_edges_str += "\n".join([f"{u}-{v}" for u, v in self.colorer.sorted_edges])
+            self.sorted_edges_label.setText(sorted_edges_str)
         else:
             self.sorted_edges_label.setText("Sorted Edges:\n\nNot available")
 
@@ -530,3 +532,43 @@ class App(QMainWindow):
                 traceback.print_exc()
         else:
             print("The current graph is not bipartite or no graph is loaded.")
+
+    def display_algorithm_process(self, mode):
+        if not hasattr(self, 'algorithm_label'):
+            self.algorithm_label = QLabel()
+            self.right_sidebar_layout.addWidget(self.algorithm_label)
+        
+        if mode == "default":
+            process_text = "Algorithm Process:\n\n"
+            process_text += "1. The algorithm starts with the\n   vertex of highest degree\n"
+            process_text += "2. Colors all edges connected to\n   this vertex\n"
+            process_text += "3. Continues with the next vertex\n   of highest degree\n"
+            process_text += "4. Repeats until all edges are\n   colored"
+        else:  # user order
+            process_text = "Algorithm Process:\n\n"
+            process_text += "1. The algorithm follows the\n   user-defined order\n"
+            process_text += "2. Colors edges in the sequence\n   they were created\n"
+            process_text += "3. Assigns colors based on\n   availability\n"
+            process_text += "4. Continues until all edges\n   are colored"
+        
+        self.algorithm_label.setText(process_text)
+
+    def display_color_classes(self, edge_colors):
+        if not hasattr(self, 'color_classes_label'):
+            self.color_classes_label = QLabel()
+            self.right_sidebar_layout.addWidget(self.color_classes_label)
+        
+        # Group edges by color
+        color_groups = {}
+        for edge, color in edge_colors.items():
+            if color not in color_groups:
+                color_groups[color] = []
+            color_groups[color].append(edge)
+        
+        # Create text for color classes
+        classes_text = "Color Classes:\n"
+        for color, edges in color_groups.items():
+            edge_str = [f"{u}-{v}" for u, v in edges]
+            classes_text += f"[{', '.join(edge_str)}] = {color}\n"
+        
+        self.color_classes_label.setText(classes_text)
