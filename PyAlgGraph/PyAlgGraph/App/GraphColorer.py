@@ -178,31 +178,36 @@ class GraphColorer:
 
     def sequential_user_order_coloring(self, graph: nx.Graph):
         start_time = time.perf_counter()
-        edge_colors = {}
-        ordered_edges = sorted(graph.edges(data=True), key=lambda x: x[2]['order'])
-
-        for u, v, _ in ordered_edges:
+        self.edge_colors = {}  # Use class attribute to store colors
+        
+        # Process edges in exactly the order they were created
+        for u, v in self.sorted_edges:
             available_colors = [True] * len(colors)
-
-            for w in graph.neighbors(u):
-                edge = (u, w) if u < w else (w, u)
-                if edge in edge_colors:
-                    color_index = colors.index(edge_colors[edge])
+            
+            # Check ALL adjacent edges of both vertices
+            # For vertex u
+            for neighbor in graph.neighbors(u):
+                adj_edge = tuple(sorted([u, neighbor]))  # Ensure consistent edge representation
+                if adj_edge in self.edge_colors:
+                    color_index = colors.index(self.edge_colors[adj_edge])
                     available_colors[color_index] = False
-            for w in graph.neighbors(v):
-                edge = (v, w) if v < w else (w, v)
-                if edge in edge_colors:
-                    color_index = colors.index(edge_colors[edge])
+            
+            # For vertex v
+            for neighbor in graph.neighbors(v):
+                adj_edge = tuple(sorted([v, neighbor]))  # Ensure consistent edge representation
+                if adj_edge in self.edge_colors:
+                    color_index = colors.index(self.edge_colors[adj_edge])
                     available_colors[color_index] = False
-
+            
+            # Assign first available color
+            edge = tuple(sorted([u, v]))  # Ensure consistent edge representation
             for i, is_available in enumerate(available_colors):
                 if is_available:
-                    edge_color = colors[i]
-                    edge_colors[(u, v)] = edge_color
+                    self.edge_colors[edge] = colors[i]
                     break
-
+        
         end_time = time.perf_counter()
         self.execution_time = end_time - start_time
-        self.colors_used = len(set(edge_colors.values()))
+        self.colors_used = len(set(self.edge_colors.values()))
         self.algorithm_used = "Sequential User Order Coloring"
-        return edge_colors
+        return self.edge_colors

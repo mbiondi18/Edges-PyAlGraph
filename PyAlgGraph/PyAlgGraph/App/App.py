@@ -172,14 +172,15 @@ class App(QMainWindow):
             self.secuencial_coloring(self.graph.edges())
             self.right_sidebar.setVisible(True)
         elif text == "Secuencial coloring user order":
-            # Store the edges in order of creation for user order
-            self.colorer.sorted_edges = list(self.graph.edges())
-            edge_colors = self.colorer.sequential_user_order_coloring(self.graph)
-            self.print(edge_colors)
-            self.display_sorted_edges()
-            self.display_algorithm_process("user")
-            self.display_color_classes(edge_colors)
-            self.right_sidebar.setVisible(True)
+            # Use the actual creation order from GraphWindow
+            if hasattr(self.graph_window, 'edge_creation_order'):
+                self.colorer.sorted_edges = self.graph_window.edge_creation_order
+                edge_colors = self.colorer.sequential_user_order_coloring(self.graph)
+                self.print(edge_colors)
+                self.display_sorted_edges()
+                self.display_algorithm_process("user")
+                self.display_color_classes(edge_colors)
+                self.right_sidebar.setVisible(True)
 
     def bipartite_coloring(app):
         edge_colors = app.colorer.bipartite_coloring(app.graph)

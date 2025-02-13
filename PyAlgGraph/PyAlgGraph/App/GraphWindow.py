@@ -179,11 +179,16 @@ class GraphWindow(QMainWindow):
         start_vertex_coords = self.nodes[self.start_vertex]
         end_vertex_coords = self.nodes[end_vertex]
         if not self.graph.has_edge(self.start_vertex, end_vertex):
-            edge_item = QGraphicsLineItem(start_vertex_coords[0], start_vertex_coords[1], end_vertex_coords[0], end_vertex_coords[1])
+            edge_item = QGraphicsLineItem(start_vertex_coords[0], start_vertex_coords[1], 
+                                        end_vertex_coords[0], end_vertex_coords[1])
             self.scene.addItem(edge_item)
             self.edge_items[(self.start_vertex, end_vertex)] = edge_item
             self.graph.add_edge(self.start_vertex, end_vertex)
-            self.add_edge_order(self.start_vertex, end_vertex)
+            
+            # Store the edge creation order
+            if not hasattr(self, 'edge_creation_order'):
+                self.edge_creation_order = []
+            self.edge_creation_order.append((self.start_vertex, end_vertex))
 
     def add_edge_order(self, start_vertex, end_vertex):
         if self.use_user_order:
