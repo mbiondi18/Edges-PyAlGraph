@@ -15,6 +15,7 @@ from StepByStepSolver import StepByStepSolver
 from GraphWindow import GraphWindow
 from BipartiteGraphWindow import BipartiteGraphWindow
 from UserOrderDialog import UserOrderDialog
+from RearrangeOrderDialog import RearrangeOrderDialog
 import networkx as nx
 from StatisticsWindow import StatisticsWindow
 from AlgorithmExplanationWindow import AlgorithmExplanationWindow
@@ -171,8 +172,8 @@ class App(QMainWindow):
         if text == "Secuencial coloring default order":
             self.secuencial_coloring(self.graph.edges())
             self.right_sidebar.setVisible(True)
+            self.show_rearrange_button()
         elif text == "Secuencial coloring user order":
-            # Use the actual creation order from GraphWindow
             if hasattr(self.graph_window, 'edge_creation_order'):
                 self.colorer.sorted_edges = self.graph_window.edge_creation_order
                 edge_colors = self.colorer.sequential_user_order_coloring(self.graph)
@@ -181,6 +182,7 @@ class App(QMainWindow):
                 self.display_algorithm_process("user")
                 self.display_color_classes(edge_colors)
                 self.right_sidebar.setVisible(True)
+                self.show_rearrange_button()
 
     def bipartite_coloring(app):
         edge_colors = app.colorer.bipartite_coloring(app.graph)
@@ -573,3 +575,52 @@ class App(QMainWindow):
             classes_text += f"[{', '.join(edge_str)}] = {color}\n"
         
         self.color_classes_label.setText(classes_text)
+
+        # Add optimality message
+        if not hasattr(self, 'optimality_label'):
+            self.optimality_label = QLabel()
+            self.optimality_label.setWordWrap(True)
+            self.right_sidebar_layout.addWidget(self.optimality_label)
+        
+        # Calculate maximum degree (∆)
+        max_degree = max(self.graph.degree(), key=lambda x: x[1])[1]
+        colors_used = len(color_groups)
+        
+        # Create optimality message
+        if colors_used <= max_degree + 1:
+            optimality_text = (f"The graph was colored with {colors_used} colors which "
+                             f"is ∆+1 ({max_degree}+1) or less therefore the coloration was optimal")
+        else:
+            optimality_text = (f"The graph was colored with {colors_used} colors which "
+                             f"is more than ∆+1 ({max_degree}+1) therefore there is a better coloration to this graph")
+        
+        # Set style for the message
+        self.optimality_label.setStyleSheet("""
+            QLabel {
+                margin-top: 10px;
+                padding: 10px;
+                background-color: #f0f0f0;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+        """)
+        self.optimality_label.setText(optimality_text)
+
+    def show_rearrange_button(self):
+        if not hasattr(self, 'rearrange_button'):
+            self.rearrange_button = QPushButton("Rearrange Coloring Order")
+            self.rearrange_button.clicked.connect(self.show_rearrange_dialog)
+            self.right_sidebar_layout.addWidget(self.rearrange_button)
+        self.rearrange_button.setVisible(True)
+
+    def show_rearrange_dialog(self):
+        current_edges = self.colorer.sorted_edges
+        dialog = RearrangeOrderDialog(current_edges, self)
+        if dialog.exec_() == QDialog.Accepted:
+            # Update the edge order and recolor
+            self.colorer.sorted_edges = dialog.new_edge_order
+            edge_colors = self.colorer.sequential_user_order_coloring(self.graph)
+            self.print(edge_colors)
+            self.display_sorted_edges()
+            self.display_algorithm_process("user")
+            self.display_color_classes(edge_colors)
