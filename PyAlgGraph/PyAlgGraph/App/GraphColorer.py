@@ -85,6 +85,60 @@ class GraphColorer:
         self.algorithm_used = "Bipartite Coloring"
         return edge_colors
 
+    def bipartite_degree_coloring(self, graph: nx.Graph):
+        """Color edges of a bipartite graph based on vertex degrees."""
+        start_time = time.perf_counter()
+        self.edge_colors = {}
+        self.sorted_edges = []  # Store edges in order of coloring
+        
+        try:
+            # Get left and right node sets using bipartite sets
+            left_nodes, right_nodes = nx.bipartite.sets(graph)
+            
+            # Sort vertices by degree (highest to lowest)
+            vertices = sorted(graph.nodes(), key=lambda x: graph.degree(x), reverse=True)
+            
+            # Process vertices in order of decreasing degree
+            for vertex in vertices:
+                # Get all uncolored edges connected to this vertex
+                vertex_edges = [(vertex, neighbor) for neighbor in graph.neighbors(vertex)
+                               if tuple(sorted((vertex, neighbor))) not in self.edge_colors]
+                
+                # Color each uncolored edge
+                for u, v in vertex_edges:
+                    edge = tuple(sorted((u, v)))  # Ensure consistent edge representation
+                    if edge not in self.edge_colors:
+                        available_colors = [True] * len(colors)
+                        
+                        # Check colors of adjacent edges
+                        for w in graph.neighbors(u):
+                            adj_edge = tuple(sorted((u, w)))
+                            if adj_edge in self.edge_colors:
+                                color_index = colors.index(self.edge_colors[adj_edge])
+                                available_colors[color_index] = False
+                                
+                        for w in graph.neighbors(v):
+                            adj_edge = tuple(sorted((v, w)))
+                            if adj_edge in self.edge_colors:
+                                color_index = colors.index(self.edge_colors[adj_edge])
+                                available_colors[color_index] = False
+                        
+                        # Assign first available color
+                        for i, is_available in enumerate(available_colors):
+                            if is_available:
+                                self.edge_colors[edge] = colors[i]
+                                self.sorted_edges.append(edge)
+                                break
+            
+            end_time = time.perf_counter()
+            self.execution_time = end_time - start_time
+            self.colors_used = len(set(self.edge_colors.values()))
+            self.algorithm_used = "Bipartite Degree-Based Coloring"
+            return self.edge_colors
+            
+        except Exception as e:
+            print(f"Error in bipartite_degree_coloring: {str(e)}")
+            raise
 
     def maximal_matching_bipartite(self, graph: nx.Graph):
         start_time = time.perf_counter()

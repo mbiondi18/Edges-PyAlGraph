@@ -261,3 +261,71 @@ class GraphVisualizer(QWidget):
         if self.positions is None:
             self.positions = nx.spring_layout(graph)
         return self.positions
+
+    def draw_bipartite_degree_coloring(self, graph, edge_colors, pos=None):
+        """Draw bipartite graph with degree-based edge coloring."""
+        print("Starting draw_bipartite_degree_coloring")
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        
+        # Get left and right node sets
+        left_nodes = [n for n, d in graph.nodes(data=True) if d.get('bipartite') == 0]
+        right_nodes = [n for n, d in graph.nodes(data=True) if d.get('bipartite') == 1]
+        
+        # If positions are not provided or are out of bounds, create new ones
+        if pos is None or any(abs(x) > 1 or abs(y) > 1 for x, y in pos.values()):
+            # Calculate positions
+            max_count = max(len(left_nodes), len(right_nodes))
+            pos = {}
+            # Position left nodes
+            for i, node in enumerate(left_nodes):
+                y_pos = 0.9 - (i * 0.8 / (max_count - 1 if max_count > 1 else 1))
+                pos[node] = (-0.4, y_pos)
+            # Position right nodes
+            for i, node in enumerate(right_nodes):
+                y_pos = 0.9 - (i * 0.8 / (max_count - 1 if max_count > 1 else 1))
+                pos[node] = (0.4, y_pos)
+        
+        print(f"Node positions: {pos}")
+        
+        # Draw nodes with larger size and different colors
+        nx.draw_networkx_nodes(graph, pos, nodelist=left_nodes, node_color='lightblue', 
+                              node_size=500, ax=ax)
+        nx.draw_networkx_nodes(graph, pos, nodelist=right_nodes, node_color='lightgreen', 
+                              node_size=500, ax=ax)
+        
+        # Draw edges with their colors
+        edge_colors_list = []
+        edge_list = []
+        for edge in graph.edges():
+            edge_tuple = tuple(sorted(edge))
+            if edge_tuple in edge_colors:
+                edge_list.append(edge)
+                edge_colors_list.append(edge_colors[edge_tuple])
+        
+        if edge_list:  # Only draw edges if there are any
+            nx.draw_networkx_edges(graph, pos,
+                                 edgelist=edge_list,
+                                 edge_color=edge_colors_list,
+                                 width=2.0,
+                                 ax=ax)
+        
+        # Draw node labels with black text
+        labels = {node: node.split('_')[1] for node in graph.nodes()}
+        nx.draw_networkx_labels(graph, pos, labels, ax=ax, font_size=10, font_color='black')
+        
+        # Set the figure background to white
+        ax.set_facecolor('white')
+        self.figure.set_facecolor('white')
+        
+        # Adjust plot limits
+        ax.set_axis_off()
+        ax.set_xlim(-0.5, 0.5)
+        ax.set_ylim(0, 1)
+        
+        # Ensure proper layout and draw
+        self.figure.tight_layout()
+        self.canvas.draw()
+        self.positions = pos  # Save positions for future use
+        
+        print("Finished drawing")

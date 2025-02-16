@@ -61,7 +61,8 @@ class App(QMainWindow):
         app.color_bipartite_graph_button = QComboBox()
         app.color_bipartite_graph_button.addItems([
             "Color Bipartite Graph (Step by Step)", 
-            "Color Bipartite Graph (Final State)"
+            "Color Bipartite Graph (Final State)",
+            "Color Bipartite Graph (Degree-Based)"
         ])
         app.color_bipartite_graph_button.activated[str].connect(app.on_color_bipartite_graph_selected)
         app.color_bipartite_graph_button.setFixedSize(200, 60)
@@ -152,7 +153,18 @@ class App(QMainWindow):
     def create_bipartite_graph(self, graph, positions):
         print("create_bipartite_graph method triggered")
         self.unable_modes()
-        self.graph = graph  # Update the app's graph with the bipartite graph
+        self.graph = graph
+        
+        # Create the coloring method combo box if it doesn't exist
+        if not hasattr(self, 'bipartite_coloring_combo'):
+            self.bipartite_coloring_combo = QComboBox()
+            self.bipartite_coloring_combo.addItems([
+                "Color Bipartite Graph (Step by Step)",
+                "Color Bipartite Graph (Final State)",
+                "Color Bipartite Graph (Degree-Based)"  # New option
+            ])
+            self.bipartite_coloring_combo.currentTextChanged.connect(self.on_color_bipartite_graph_selected)
+            self.right_sidebar_layout.addWidget(self.bipartite_coloring_combo)
         
         # Ensure all nodes have the 'bipartite' attribute
         left_nodes = set(n for n in self.graph.nodes() if n.startswith('left_'))
@@ -221,8 +233,10 @@ class App(QMainWindow):
     def on_color_bipartite_graph_selected(self, text):
         if text == "Color Bipartite Graph (Step by Step)":
             self.color_bipartite_graph()
-        else:  # Final State
+        elif text == "Color Bipartite Graph (Final State)":
             self.color_bipartite_graph_final()
+        elif text == "Color Bipartite Graph (Degree-Based)":
+            self.color_bipartite_graph_degree_based()
 
     def color_bipartite_graph(self):
         if isinstance(self.graph, nx.Graph) and nx.is_bipartite(self.graph):
@@ -547,12 +561,19 @@ class App(QMainWindow):
             process_text += "2. Colors all edges connected to\n   this vertex\n"
             process_text += "3. Continues with the next vertex\n   of highest degree\n"
             process_text += "4. Repeats until all edges are\n   colored"
-        else:  # user order
+        elif mode == "user":
             process_text = "Algorithm Process:\n\n"
             process_text += "1. The algorithm follows the\n   user-defined order\n"
             process_text += "2. Colors edges in the sequence\n   they were created\n"
             process_text += "3. Assigns colors based on\n   availability\n"
             process_text += "4. Continues until all edges\n   are colored"
+        elif mode == "degree":
+            process_text = "Algorithm Process:\n\n"
+            process_text += "1. The algorithm starts with the\n   vertex of highest degree\n"
+            process_text += "2. Colors all edges connected to\n   this vertex\n"
+            process_text += "3. Continues with the next vertex\n   of highest degree\n"
+            process_text += "4. Ensures bipartite properties\n   are maintained\n"
+            process_text += "5. Repeats until all edges are\n   colored"
         
         self.algorithm_label.setText(process_text)
 
@@ -624,3 +645,37 @@ class App(QMainWindow):
             self.display_sorted_edges()
             self.display_algorithm_process("user")
             self.display_color_classes(edge_colors)
+
+    def color_bipartite_graph_degree_based(self):
+        print("Starting degree-based coloring")
+        if isinstance(self.graph, nx.Graph) and nx.is_bipartite(self.graph):
+            try:
+                print("Graph is bipartite")
+                # Initialize colorer if not already done
+                if not hasattr(self, 'colorer'):
+                    self.colorer = GraphColorer(self.graph)
+                
+                # Color the graph using the degree-based algorithm
+                edge_colors = self.colorer.bipartite_degree_coloring(self.graph)
+                print(f"Coloring complete. Edge colors: {edge_colors}")
+                
+                # Update visualization using the new method
+                self.visualizer.draw_bipartite_degree_coloring(
+                    self.graph,
+                    edge_colors,
+                    self.visualizer.positions
+                )
+                
+                # Update the right sidebar
+                self.display_sorted_edges()
+                self.display_algorithm_process("degree")
+                self.display_color_classes(edge_colors)
+                self.right_sidebar.setVisible(True)
+                
+            except Exception as e:
+                print(f"Error in bipartite_degree_coloring: {e}")
+                import traceback
+                traceback.print_exc()
+        else:
+            print("Graph is not bipartite or no graph is loaded")
+            QMessageBox.warning(self, "Error", "The current graph is not bipartite or no graph is loaded.")
