@@ -107,7 +107,7 @@ class App(QMainWindow):
         # Create a scroll area
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
         # Create a widget to hold the content
         scroll_content = QWidget()
