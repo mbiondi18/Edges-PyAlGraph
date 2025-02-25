@@ -265,3 +265,52 @@ class GraphColorer:
         self.colors_used = len(set(self.edge_colors.values()))
         self.algorithm_used = "Sequential User Order Coloring"
         return self.edge_colors
+
+    def bipartite_user_order_coloring(self, graph: nx.Graph, edge_order=None):
+        """Color edges of a bipartite graph based on user-defined order."""
+        start_time = time.perf_counter()
+        self.edge_colors = {}
+        
+        # Use provided edge order or default to class attribute if available
+        if edge_order:
+            self.sorted_edges = edge_order
+        elif not hasattr(self, 'sorted_edges'):
+            # If no order is provided, create a default order
+            self.sorted_edges = list(graph.edges())
+        
+        try:
+            # Process edges in the specified order
+            for u, v in self.sorted_edges:
+                edge = tuple(sorted((u, v)))  # Ensure consistent edge representation
+                if edge not in self.edge_colors:
+                    available_colors = [True] * len(colors)
+                    
+                    # Check colors of adjacent edges to u
+                    for w in graph.neighbors(u):
+                        adj_edge = tuple(sorted((u, w)))
+                        if adj_edge in self.edge_colors:
+                            color_index = colors.index(self.edge_colors[adj_edge])
+                            available_colors[color_index] = False
+                    
+                    # Check colors of adjacent edges to v
+                    for w in graph.neighbors(v):
+                        adj_edge = tuple(sorted((v, w)))
+                        if adj_edge in self.edge_colors:
+                            color_index = colors.index(self.edge_colors[adj_edge])
+                            available_colors[color_index] = False
+                    
+                    # Assign first available color
+                    for i, is_available in enumerate(available_colors):
+                        if is_available:
+                            self.edge_colors[edge] = colors[i]
+                            break
+            
+            end_time = time.perf_counter()
+            self.execution_time = end_time - start_time
+            self.colors_used = len(set(self.edge_colors.values()))
+            self.algorithm_used = "Bipartite User Order Coloring"
+            return self.edge_colors
+            
+        except Exception as e:
+            print(f"Error in bipartite_user_order_coloring: {str(e)}")
+            raise

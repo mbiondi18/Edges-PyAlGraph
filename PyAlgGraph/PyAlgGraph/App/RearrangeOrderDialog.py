@@ -75,8 +75,15 @@ class RearrangeOrderDialog(QDialog):
         new_order = []
         for i in range(self.new_list.count()):
             edge_str = self.new_list.item(i).text()
-            v1, v2 = map(int, edge_str.split('-'))
-            new_order.append((v1, v2))
+            
+            # Check if we're dealing with bipartite graph nodes (which contain 'left_' or 'right_')
+            if 'left_' in edge_str or 'right_' in edge_str:
+                v1, v2 = edge_str.split('-')
+                new_order.append((v1, v2))
+            else:
+                # Regular graph nodes (integers)
+                v1, v2 = map(int, edge_str.split('-'))
+                new_order.append((v1, v2))
 
         self.new_edge_order = new_order
         self.accept() 
