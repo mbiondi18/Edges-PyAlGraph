@@ -210,14 +210,44 @@ class App(QMainWindow):
         app.display_color_classes(edge_colors)
         app.right_sidebar.setVisible(True)
 
-    def display_sorted_edges(self):
-        if hasattr(self.colorer, 'sorted_edges'):
-            sorted_edges_str = "Sorted Edges:\n\n"
-            sorted_edges_str += "\n".join([f"{u}-{v}" for u, v in self.colorer.sorted_edges])
-            self.sorted_edges_label.setText(sorted_edges_str)
-        else:
-            self.sorted_edges_label.setText("Sorted Edges:\n\nNot available")
+    def format_bipartite_edge(self, edge):
+        """Format bipartite edge for display: convert 'left_X-right_Y' to 'LX-RY'."""
+        u, v = edge
+        
+        # Convert left_X to LX
+        if isinstance(u, str) and u.startswith('left_'):
+            u = 'L' + u[5:]  # Replace 'left_' with 'L'
+        elif isinstance(u, str) and u.startswith('right_'):
+            u = 'R' + u[6:]  # Replace 'right_' with 'R'
+        
+        # Convert right_Y to RY
+        if isinstance(v, str) and v.startswith('left_'):
+            v = 'L' + v[5:]  # Replace 'left_' with 'L'
+        elif isinstance(v, str) and v.startswith('right_'):
+            v = 'R' + v[6:]  # Replace 'right_' with 'R'
+        
+        return f"{u}-{v}"
 
+    def display_sorted_edges(self):
+        if not hasattr(self, 'sorted_edges_label'):
+            self.sorted_edges_label = QLabel("Sorted Edges:")
+            self.right_sidebar_layout.addWidget(self.sorted_edges_label)
+        
+        # Create sorted edges text
+        if hasattr(self.colorer, 'sorted_edges'):
+            sorted_edges_text = ""
+            for edge in self.colorer.sorted_edges:
+                # Format the edge for display
+                formatted_edge = self.format_bipartite_edge(edge)
+                sorted_edges_text += formatted_edge + "\n"
+            
+            if not hasattr(self, 'sorted_edges_content'):
+                self.sorted_edges_content = QLabel()
+                self.sorted_edges_content.setWordWrap(True)
+                self.right_sidebar_layout.addWidget(self.sorted_edges_content)
+            
+            self.sorted_edges_content.setText(sorted_edges_text)
+    
     def secuencial_coloring_user_order(app):
         app.unable_modes()
         app.select_order_mode = True
@@ -582,7 +612,7 @@ class App(QMainWindow):
 
     def display_color_classes(self, edge_colors):
         if not hasattr(self, 'color_classes_label'):
-            self.color_classes_label = QLabel()
+            self.color_classes_label = QLabel("Color Classes:")
             self.right_sidebar_layout.addWidget(self.color_classes_label)
         
         # Group edges by color
@@ -592,13 +622,24 @@ class App(QMainWindow):
                 color_groups[color] = []
             color_groups[color].append(edge)
         
-        # Create text for color classes
-        classes_text = "Color Classes:\n"
+        # Format the text with consistent edge format
+        color_text = ""
         for color, edges in color_groups.items():
-            edge_str = [f"{u}-{v}" for u, v in edges]
-            classes_text += f"[{', '.join(edge_str)}] = {color}\n"
+            color_text += f"{color} = "
+            formatted_edges = []
+            for edge in edges:
+                # Format the edge for display
+                formatted_edge = self.format_bipartite_edge(edge)
+                formatted_edges.append(formatted_edge)
+            color_text += ", ".join(formatted_edges)
+            color_text += "\n"
         
-        self.color_classes_label.setText(classes_text)
+        if not hasattr(self, 'color_classes_content'):
+            self.color_classes_content = QLabel()
+            self.color_classes_content.setWordWrap(True)
+            self.right_sidebar_layout.addWidget(self.color_classes_content)
+        
+        self.color_classes_content.setText(color_text)
 
         # Add optimality message
         if not hasattr(self, 'optimality_label'):
