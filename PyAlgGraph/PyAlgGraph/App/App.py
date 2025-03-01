@@ -134,10 +134,8 @@ class App(QMainWindow):
         main_layout.addWidget(right_sidebar)
 
     def open_graph_window(app):
-        user_order_dialog = UserOrderDialog(app)
-        result = user_order_dialog.exec_()
-        use_user_order = result == QDialog.Accepted
-        app.graph_window = GraphWindow(app, app.graph, use_user_order)
+        # Remove the redundant dialog
+        app.graph_window = GraphWindow(app, app.graph, False)  # Always use default ordering initially
         app.graph_window.show()
 
     def unable_modes(app):
