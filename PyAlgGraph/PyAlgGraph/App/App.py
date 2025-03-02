@@ -112,12 +112,8 @@ class App(QMainWindow):
         # Create a widget to hold the content
         scroll_content = QWidget()
         right_sidebar_layout = QVBoxLayout(scroll_content)
-        
-        # Add the labels to the scroll content
-        app.sorted_edges_label = QLabel("Sorted Edges:")
-        app.sorted_edges_label.setAlignment(Qt.AlignTop)
-        app.sorted_edges_label.setWordWrap(True)
-        right_sidebar_layout.addWidget(app.sorted_edges_label)
+        right_sidebar_layout.setSpacing(0)
+        right_sidebar_layout.setContentsMargins(5, 5, 5, 5)
         
         # Set up the scroll area
         scroll.setWidget(scroll_content)
@@ -141,7 +137,7 @@ class App(QMainWindow):
     def unable_modes(app):
         app.select_order_mode = False
 
-    def create_graph(app, graph, positions=None): 
+    def create_graph(app, graph, positions=None):
         print("create_graph method triggered")
         app.unable_modes()
         app.graph = graph.copy()  # Create a copy of the graph
@@ -227,25 +223,26 @@ class App(QMainWindow):
         return f"{u}-{v}"
 
     def display_sorted_edges(self):
-        if not hasattr(self, 'sorted_edges_label'):
-            self.sorted_edges_label = QLabel("Sorted Edges:")
-            self.right_sidebar_layout.addWidget(self.sorted_edges_label)
+        # Create a single string with header and content
+        sorted_edges_text = "Sorted Edges:\n\n"
         
-        # Create sorted edges text
         if hasattr(self.colorer, 'sorted_edges'):
-            sorted_edges_text = ""
             for edge in self.colorer.sorted_edges:
                 # Format the edge for display
                 formatted_edge = self.format_bipartite_edge(edge)
                 sorted_edges_text += formatted_edge + "\n"
-            
-            if not hasattr(self, 'sorted_edges_content'):
-                self.sorted_edges_content = QLabel()
-                self.sorted_edges_content.setWordWrap(True)
-                self.right_sidebar_layout.addWidget(self.sorted_edges_content)
-            
-            self.sorted_edges_content.setText(sorted_edges_text)
-    
+        
+        # Clear existing content if needed
+        if hasattr(self, 'sorted_edges_combined'):
+            self.right_sidebar_layout.removeWidget(self.sorted_edges_combined)
+            self.sorted_edges_combined.deleteLater()
+        
+        # Create a single label with both title and content
+        self.sorted_edges_combined = QLabel(sorted_edges_text)
+        self.sorted_edges_combined.setWordWrap(True)
+        self.sorted_edges_combined.setContentsMargins(0, 0, 0, 0)
+        self.right_sidebar_layout.addWidget(self.sorted_edges_combined)
+
     def secuencial_coloring_user_order(app):
         app.unable_modes()
         app.select_order_mode = True
@@ -500,6 +497,7 @@ class App(QMainWindow):
             if not hasattr(self, 'explanation_button'):
                 self.explanation_button = QPushButton("Show Algorithm Explanation")
                 self.explanation_button.clicked.connect(self.show_algorithm_explanation)
+                self.explanation_button.setContentsMargins(0, 0, 0, 0)  # Remove margins
                 self.right_sidebar_layout.addWidget(self.explanation_button)
             self.explanation_button.setVisible(True)
 
@@ -582,10 +580,7 @@ class App(QMainWindow):
             print("The current graph is not bipartite or no graph is loaded.")
 
     def display_algorithm_process(self, mode):
-        if not hasattr(self, 'algorithm_label'):
-            self.algorithm_label = QLabel()
-            self.right_sidebar_layout.addWidget(self.algorithm_label)
-        
+        # Create process title and steps in a single string
         if mode == "default":
             process_text = "Algorithm Process:\n\n"
             process_text += "1. The algorithm starts with the\n   vertex of highest degree\n"
@@ -606,13 +601,18 @@ class App(QMainWindow):
             process_text += "4. Ensures bipartite properties\n   are maintained\n"
             process_text += "5. Repeats until all edges are\n   colored"
         
-        self.algorithm_label.setText(process_text)
+        # Clear existing content if needed
+        if hasattr(self, 'algorithm_combined'):
+            self.right_sidebar_layout.removeWidget(self.algorithm_combined)
+            self.algorithm_combined.deleteLater()
+        
+        # Create a single label with both title and content
+        self.algorithm_combined = QLabel(process_text)
+        self.algorithm_combined.setWordWrap(True)
+        self.algorithm_combined.setContentsMargins(0, 0, 0, 0)
+        self.right_sidebar_layout.addWidget(self.algorithm_combined)
 
     def display_color_classes(self, edge_colors):
-        if not hasattr(self, 'color_classes_label'):
-            self.color_classes_label = QLabel("Color Classes:")
-            self.right_sidebar_layout.addWidget(self.color_classes_label)
-        
         # Group edges by color
         color_groups = {}
         for edge, color in edge_colors.items():
@@ -620,8 +620,8 @@ class App(QMainWindow):
                 color_groups[color] = []
             color_groups[color].append(edge)
         
-        # Format the text with consistent edge format
-        color_text = ""
+        # Format text with header and content in one string
+        color_text = "Color Classes:\n\n"
         for color, edges in color_groups.items():
             color_text += f"{color} = "
             formatted_edges = []
@@ -632,19 +632,17 @@ class App(QMainWindow):
             color_text += ", ".join(formatted_edges)
             color_text += "\n"
         
-        if not hasattr(self, 'color_classes_content'):
-            self.color_classes_content = QLabel()
-            self.color_classes_content.setWordWrap(True)
-            self.right_sidebar_layout.addWidget(self.color_classes_content)
+        # Clear existing content if needed
+        if hasattr(self, 'color_classes_combined'):
+            self.right_sidebar_layout.removeWidget(self.color_classes_combined)
+            self.color_classes_combined.deleteLater()
         
-        self.color_classes_content.setText(color_text)
+        # Create a single label with both title and content
+        self.color_classes_combined = QLabel(color_text)
+        self.color_classes_combined.setWordWrap(True)
+        self.color_classes_combined.setContentsMargins(0, 0, 0, 0)
+        self.right_sidebar_layout.addWidget(self.color_classes_combined)
 
-        # Add optimality message
-        if not hasattr(self, 'optimality_label'):
-            self.optimality_label = QLabel()
-            self.optimality_label.setWordWrap(True)
-            self.right_sidebar_layout.addWidget(self.optimality_label)
-        
         # Calculate maximum degree (∆)
         max_degree = max(self.graph.degree(), key=lambda x: x[1])[1]
         colors_used = len(color_groups)
@@ -657,24 +655,37 @@ class App(QMainWindow):
             optimality_text = (f"The graph was colored with {colors_used} colors which "
                              f"is more than ∆+1 ({max_degree}+1) therefore there is a better coloration to this graph")
         
-        # Set style for the message
+        # Clear existing content if needed
+        if hasattr(self, 'optimality_label'):
+            self.right_sidebar_layout.removeWidget(self.optimality_label)
+            self.optimality_label.deleteLater()
+        
+        # Create the optimality label
+        self.optimality_label = QLabel(optimality_text)
+        self.optimality_label.setWordWrap(True)
+        self.optimality_label.setContentsMargins(0, 0, 0, 0)
         self.optimality_label.setStyleSheet("""
             QLabel {
-                margin-top: 10px;
-                padding: 10px;
+                margin-top: 3px;
+                padding: 5px;
                 background-color: #f0f0f0;
                 border-radius: 5px;
                 font-weight: bold;
             }
         """)
-        self.optimality_label.setText(optimality_text)
+        self.right_sidebar_layout.addWidget(self.optimality_label)
 
     def show_rearrange_button(self):
-        if not hasattr(self, 'rearrange_button'):
-            self.rearrange_button = QPushButton("Rearrange Coloring Order")
-            self.rearrange_button.clicked.connect(self.show_rearrange_dialog)
-            self.right_sidebar_layout.addWidget(self.rearrange_button)
-        self.rearrange_button.setVisible(True)
+        # Clear existing button if needed
+        if hasattr(self, 'rearrange_button'):
+            self.right_sidebar_layout.removeWidget(self.rearrange_button)
+            self.rearrange_button.deleteLater()
+        
+        # Create a new button
+        self.rearrange_button = QPushButton("Rearrange Coloring Order")
+        self.rearrange_button.clicked.connect(self.show_rearrange_dialog)
+        self.rearrange_button.setContentsMargins(0, 0, 0, 0)
+        self.right_sidebar_layout.addWidget(self.rearrange_button)
 
     def show_rearrange_dialog(self):
         current_edges = self.colorer.sorted_edges
@@ -699,10 +710,23 @@ class App(QMainWindow):
                 edge_colors = self.colorer.sequential_user_order_coloring(self.graph)
                 self.print(edge_colors)
             
+            # Clear the layout first to ensure correct order
+            self.clear_right_sidebar()
+            
+            # Re-add all widgets in the correct order
             self.display_sorted_edges()
             self.display_algorithm_process("user")
             self.display_color_classes(edge_colors)
+            self.show_rearrange_button()  # Now this will be added at the end
             self.right_sidebar.setVisible(True)
+
+    def clear_right_sidebar(self):
+        # Remove all widgets from the layout
+        while self.right_sidebar_layout.count():
+            item = self.right_sidebar_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
 
     def color_bipartite_graph_degree_based(self):
         print("Starting degree-based coloring")
@@ -778,12 +802,15 @@ class App(QMainWindow):
                         self.visualizer.positions
                     )
                     
+                    # Clear the layout first to ensure correct order
+                    self.clear_right_sidebar()
+                    
                     # Update the right sidebar
                     self.display_sorted_edges()
                     self.display_algorithm_process("user")
                     self.display_color_classes(edge_colors)
+                    self.show_rearrange_button()  # Now this will be added at the end
                     self.right_sidebar.setVisible(True)
-                    self.show_rearrange_button()
                 else:
                     print("No edge creation order found")
                     QMessageBox.warning(self, "Error", "No edge creation order available. Please create a bipartite graph first.")
