@@ -11,8 +11,10 @@ This directory contains various diagrams that document the structure and flow of
 2. **Component Interaction Diagram** - Shows how components interact during operations
    - Available as text-based illustration (`component_interaction.txt`)
 
-3. **Sequence Diagram** - Shows the sequence of operations for coloring a bipartite graph
-   - Available as Mermaid markup (`mermaid_sequence_diagram.md`)
+3. **Sequence Diagrams** - Show the sequence of operations for different workflows
+   - Bipartite graph workflow (`mermaid_sequence_diagram.md`)
+   - Regular graph workflow (`mermaid_sequence_diagram_regular.md`)
+   - Combined workflow diagram (`mermaid_combined_sequence_diagram.md`)
 
 4. **Flowchart** - Shows the algorithmic flow of the application
    - Available as Mermaid markup (`mermaid_flowchart.md`)
@@ -51,8 +53,11 @@ Shows the main classes and their relationships in the PyAlgGraph application:
 ### Component Interaction Diagram
 Illustrates how the different components interact during key operations, showing the flow of data and control between classes.
 
-### Sequence Diagram
-Shows the step-by-step sequence of operations when a user creates and colors a bipartite graph.
+### Sequence Diagrams
+Three separate sequence diagrams are provided:
+1. **Bipartite Graph Workflow** - Shows the step-by-step sequence of operations when a user creates and colors a bipartite graph.
+2. **Regular Graph Workflow** - Shows the step-by-step sequence of operations when a user creates and colors a regular graph.
+3. **Combined Workflow** - Shows both workflows in a single diagram with branches, allowing for easy comparison.
 
 ### Flowchart
-Depicts the algorithmic flow of the application, from start to finish, for coloring bipartite graphs. 
+Depicts the algorithmic flow of the application, from start to finish, for coloring both regular and bipartite graphs. 
