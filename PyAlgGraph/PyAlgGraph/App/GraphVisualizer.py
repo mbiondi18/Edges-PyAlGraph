@@ -149,14 +149,32 @@ class GraphVisualizer(QWidget):
         left_nodes = [n for n in graph.nodes() if n.startswith('left_')]
         right_nodes = [n for n in graph.nodes() if n.startswith('right_')]
         
-        # Adjust node positions
-        max_nodes = max(len(left_nodes), len(right_nodes))
+        # Adjust node positions - NEW POSITIONING LOGIC
+        # Calculate separate positions for each side, distributing evenly along the full height
+        vertical_range = 0.9  # Use 90% of the vertical space (from 0.05 to 0.95)
+        top_margin = 0.95    # Position of the topmost node
+        
+        # For left nodes
         for i, node in enumerate(left_nodes):
-            pos[node] = (-0.35, 1 - (i / (max_nodes - 1)) if max_nodes > 1 else 0.5)
+            if len(left_nodes) > 1:
+                # Distribute evenly from top to bottom
+                y_pos = top_margin - (i * vertical_range / (len(left_nodes) - 1))
+            else:
+                # Single node should be centered
+                y_pos = 0.5
+            pos[node] = (-0.35, y_pos)
+        
+        # For right nodes
         for i, node in enumerate(right_nodes):
-            pos[node] = (0.35, 1 - (i / (max_nodes - 1)) if max_nodes > 1 else 0.5)
+            if len(right_nodes) > 1:
+                # Distribute evenly from top to bottom
+                y_pos = top_margin - (i * vertical_range / (len(right_nodes) - 1))
+            else:
+                # Single node should be centered
+                y_pos = 0.5
+            pos[node] = (0.35, y_pos)
 
-        # Draw nodes - REDUCED SIZE from 1000 to 500
+        # Draw nodes
         node_size = 500
         nx.draw_networkx_nodes(graph, pos, nodelist=left_nodes, node_color='lightblue', ax=ax, node_size=node_size)
         nx.draw_networkx_nodes(graph, pos, nodelist=right_nodes, node_color='lightgreen', ax=ax, node_size=node_size)
