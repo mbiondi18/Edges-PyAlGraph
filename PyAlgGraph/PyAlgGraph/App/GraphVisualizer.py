@@ -156,8 +156,8 @@ class GraphVisualizer(QWidget):
         for i, node in enumerate(right_nodes):
             pos[node] = (0.35, 1 - (i / (max_nodes - 1)) if max_nodes > 1 else 0.5)
 
-        # Draw nodes
-        node_size = 1000
+        # Draw nodes - REDUCED SIZE from 1000 to 500
+        node_size = 500
         nx.draw_networkx_nodes(graph, pos, nodelist=left_nodes, node_color='lightblue', ax=ax, node_size=node_size)
         nx.draw_networkx_nodes(graph, pos, nodelist=right_nodes, node_color='lightgreen', ax=ax, node_size=node_size)
         
@@ -243,9 +243,9 @@ class GraphVisualizer(QWidget):
             for edge in matched_edges:
                 self.final_edge_colors[edge] = color
 
-        # Common drawing code for both cases
+        # Common drawing code for both cases - CHANGED font_color to 'black'
         labels = {node: node.split('_')[1] for node in graph.nodes()}
-        nx.draw_networkx_labels(graph, pos, labels, ax=ax, font_size=10, font_color='white')
+        nx.draw_networkx_labels(graph, pos, labels, ax=ax, font_size=10, font_color='black')
 
         ax.set_axis_off()
         ax.set_xlim(-0.5, 0.5)
