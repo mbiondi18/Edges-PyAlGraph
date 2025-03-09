@@ -1,0 +1,80 @@
++--------------------------+
+|           App            |
++--------------------------+
+| - graph: networkx.Graph  |
+| - analyzer: GraphAnalyzer|
+| - colorer: GraphColorer  |
++--------------------------+
+| + open_graph_window()    |
+| + open_bipartite_window()|
+| + create_graph()         |
+| + create_bipartite_graph()|
+| + secuencial_coloring()  |
+| + bipartite_coloring()   |
+| + color_bipartite_graph()|
+| + show_statistics()      |
+| + show_algorithm_expl()  |
++--------------------------+
+            ^
+            |
+            | uses
+            |
++---------------------------+    +-----------------------------+    +-----------------------------+
+|    GraphVisualizer        |    |       GraphColorer          |    |      StatisticsWindow       |
++---------------------------+    +-----------------------------+    +-----------------------------+
+| - figure: Figure          |    | - execution_time: float     |    | - app: App                  |
+| - canvas: FigureCanvas    |    | - color: dict               |    | - content_layout: QVBoxLayout|
+| - positions: dict         |    | - dsatur: dict              |    +-----------------------------+
++---------------------------+    | - edge_colors: dict         |    | + get_colors_used()         |
+| + create_graph()          |    +-----------------------------+    | + get_algorithm_used()      |
+| + draw_graph()            |    | + secuencial_coloring()     |    | + get_connections()         |
+| + create_bipartite_graph()|    | + bipartite_coloring()      |    | + import_statistics()       |
+| + draw_bipartite_graph()  |    | + bipartite_degree_coloring()|   | + get_sorted_edges()        |
+| + draw_bipartite_matching()|   | + maximal_matching_bipartite()|  | + update_statistics()       |
+| + draw_execution_time()   |    | + find_augmenting_path()    |    | + add_matching_statistics() |
++---------------------------+    | + sequential_user_order()   |    +-----------------------------+
+                                 | + bipartite_user_order()    |
+                                 +-----------------------------+
+        |                                 |                           |
+        |                                 |                           |
+        v                                 v                           v
++---------------------------+    +-----------------------------+
+|     GraphWindow           |    |    BipartiteGraphWindow     |    +-----------------------------+
++---------------------------+    +-----------------------------+    | AlgorithmExplanationWindow  |
+| - app: App                |    | - app: App                  |    +-----------------------------+
+| - graph: networkx.Graph   |    | - graph: networkx.DiGraph   |    | - algorithm_text: str       |
+| - scene: QGraphicsScene   |    | - edge_creation_order: list |    +-----------------------------+
++---------------------------+    | - nodes_left: dict          |    | + __init__(text)            |
+| + add_vertex_mode()       |    | - nodes_right: dict         |    +-----------------------------+
+| + add_edge_mode()         |    | + add_vertex_left_mode()    |
+| + delete_mode()           |    | + add_vertex_right_mode()   |
+| + create_graph()          |    | + add_edge_mode()           |
+| + mousePressEvent()       |    | + delete_mode()             |
++---------------------------+    | + create_bipartite_graph()  |
+                                 | + get_positions()           |
+                                 | + mousePressEvent()         |
+                                 +-----------------------------+
+
+LEGEND:
+-------
++----------------+
+|  Class Name    |
++----------------+
+| - Attributes   |
++----------------+
+| + Methods      |
++----------------+
+
+Relationships:
+→ Association
+↔ Bidirectional Association
+◆ Composition (contains)
+◇ Aggregation (has)
+△ Inheritance/Extension
+
+Notes:
+1. App is the central controller class
+2. GraphColorer implements coloring algorithms
+3. GraphVisualizer handles visualization
+4. GraphWindow and BipartiteGraphWindow are UI components
+5. StatisticsWindow displays coloring statistics 
