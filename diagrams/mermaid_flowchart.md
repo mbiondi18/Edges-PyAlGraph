@@ -18,8 +18,19 @@ flowchart TD
     ColorR -->|Yes| SelectAlgoR[Select Coloring Algorithm]
     ColorR -->|No| BackToMainR[Return to Main Menu]
     
-    SelectAlgoR --> SeqColoring[Sequential Coloring]
-    SeqColoring --> DisplayRegular[Display Colored Graph]
+    %% Regular graph coloring options
+    SelectAlgoR --> RegColorChoice{Coloring Type?}
+    RegColorChoice -->|Default Order| SeqDefaultColoring[Sequential Coloring Default Order]
+    RegColorChoice -->|User Order| SeqUserColoring[Sequential Coloring User Order]
+    
+    SeqDefaultColoring --> RearrangeRegular{Rearrange Order?}
+    SeqUserColoring --> RearrangeRegular
+    
+    RearrangeRegular -->|Yes| RearrangeOrderReg[Open RearrangeOrderDialog]
+    RearrangeOrderReg --> ReapplyRegColoring[Reapply Coloring with New Order]
+    ReapplyRegColoring --> DisplayRegular[Display Colored Graph]
+    
+    RearrangeRegular -->|No| DisplayRegular
     DisplayRegular --> Stats[View Statistics]
     
     %% Bipartite graph path
@@ -35,19 +46,16 @@ flowchart TD
     BipartiteChoice -->|Degree-based| DegreeBipartite[Degree-based Bipartite Coloring]
     BipartiteChoice -->|User Order| UserOrderBipartite[User Order Bipartite Coloring]
     
-    StandardBipartite --> MaximalMatching[Find Maximal Matching]
-    MaximalMatching --> AugmentPath[Find Augmenting Paths]
-    AugmentPath --> ColorEdges[Color Edges]
+    StandardBipartite --> RearrangeBipartite{Rearrange Order?}
+    DegreeBipartite --> RearrangeBipartite
+    UserOrderBipartite --> RearrangeBipartite
     
-    DegreeBipartite --> SortByDegree[Sort Vertices by Degree]
-    SortByDegree --> ProcessByDegree[Process Vertices in Degree Order]
-    ProcessByDegree --> ColorEdges
+    RearrangeBipartite -->|Yes| RearrangeOrderBip[Open RearrangeOrderDialog]
+    RearrangeOrderBip --> ReapplyBipColoring[Reapply Coloring with New Order]
+    ReapplyBipColoring --> DisplayBipartite[Display Colored Bipartite Graph]
     
-    UserOrderBipartite --> GetUserOrder[Get User-defined Edge Order]
-    GetUserOrder --> ProcessUserOrder[Process Edges in User Order]
-    ProcessUserOrder --> ColorEdges
+    RearrangeBipartite -->|No| DisplayBipartite
     
-    ColorEdges --> DisplayBipartite[Display Colored Bipartite Graph]
     DisplayBipartite --> StepByStep{Step by Step View?}
     StepByStep -->|Yes| EnableStepping[Enable Step Navigation]
     StepByStep -->|No| Stats
@@ -69,11 +77,12 @@ This flowchart illustrates the algorithmic flow of the PyAlgGraph application, s
 2. Main flow branches for regular graphs vs. bipartite graphs
 3. The graph creation process
 4. Different coloring algorithms:
-   - Sequential coloring for regular graphs
+   - Sequential coloring for regular graphs (with both default and user order options)
    - Standard bipartite coloring
    - Degree-based bipartite coloring
    - User-order bipartite coloring
-5. Step-by-step visualization option
-6. Statistics and explanation display
+5. Order rearrangement functionality for both regular and bipartite graphs
+6. Step-by-step visualization option
+7. Statistics and explanation display
 
 The diamond shapes represent decision points, while rectangles show processes or operations. The rounded rectangles indicate the start and end points of the application flow. 
