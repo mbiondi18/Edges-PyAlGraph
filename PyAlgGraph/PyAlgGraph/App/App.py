@@ -393,13 +393,101 @@ class App(QMainWindow):
                         augmenting_path=None,
                         color="final"
                     )
-                    # Only show matching groups in the final state
+                    
+                    # Clear previous content first
+                    self.clear_right_sidebar()
+                    
+                    # For final state, only show matching groups and color classes
                     self.display_matching_groups()
+                    
+                    # Display color classes
+                    edge_colors = {}
+                    matching_data = current_state["matching"]
+                    
+                    # Check what format the matching data is in
+                    if matching_data:
+                        # Sample first item to determine format
+                        sample_key, sample_value = next(iter(matching_data.items()))
+                        
+                        if isinstance(sample_value, str) and sample_value in ["Red", "Green", "Blue", "Yellow", "Orange", "Violet", "Brown"]:
+                            # This is already in the edge:color format (from final state)
+                            print("Final state matching data is already in edge:color format")
+                            edge_colors = matching_data
+                        else:
+                            # This is in the left:right node format (from intermediate steps)
+                            print("Converting left:right format to edge:color format")
+                            for edge, color in current_state["matching"].items():
+                                if isinstance(edge, tuple):
+                                    edge_colors[edge] = color
+                    
+                    print(f"Final state edge_colors: {edge_colors}")
+                    self.display_color_classes(edge_colors)
+                    
+                    # Add the explanation button
+                    if not hasattr(self, 'explanation_button'):
+                        self.explanation_button = QPushButton("Show Algorithm Explanation")
+                        self.explanation_button.clicked.connect(self.show_algorithm_explanation)
+                        self.explanation_button.setContentsMargins(0, 0, 0, 0)
+                        self.right_sidebar_layout.addWidget(self.explanation_button)
+                    self.explanation_button.setVisible(True)
+                    
                     self.right_sidebar.setVisible(True)
+                    
+                    # Update step indicator (if it's the final state show proper step number)
+                    if hasattr(self, 'current_step') and hasattr(self, 'matching_states'):
+                        total_steps = len(self.matching_states)
+                        current = self.current_step + 1  # Add 1 since we're using 1-indexed display
+                        self.visualizer.update_step_info(current, total_steps)
+                    
                     return
                 else:
-                    # Hide the right sidebar for non-final states
-                    self.right_sidebar.setVisible(False)
+                    # For non-final states, still show color information
+                    # But clear previous content first
+                    self.clear_right_sidebar()
+                    
+                    # Show current matchings for this step
+                    step_info = f"Step {self.current_step + 1}/{len(self.matching_states)}\n\n"
+                    step_info += f"Color: {color}\n\n"
+                    
+                    # Create matching info for this step
+                    matching_text = "Current Matching:\n\n"
+                    sorted_matches = []
+                    for left, right in current_matching.items():
+                        if isinstance(left, str) and isinstance(right, str):
+                            left_label = f"L{left.split('_')[1]}" if '_' in left else left
+                            right_label = f"R{right.split('_')[1]}" if '_' in right else right
+                            sorted_matches.append((left_label, right_label))
+                    sorted_matches.sort()
+                    
+                    for left, right in sorted_matches:
+                        matching_text += f"{left}-{right}\n"
+                    
+                    # Add step info and matching info labels to sidebar
+                    step_label = QLabel(step_info)
+                    self.right_sidebar_layout.addWidget(step_label)
+                    
+                    matching_label = QLabel(matching_text)
+                    matching_label.setWordWrap(True)
+                    self.right_sidebar_layout.addWidget(matching_label)
+                    
+                    # Show color classes for current matching
+                    current_colors = {}
+                    # Convert current matching to edge:color format
+                    for left, right in current_matching.items():
+                        current_colors[(left, right)] = color
+                        
+                    # Also include edges from previous steps that might be colored differently
+                    if hasattr(self, 'cumulative_edge_colors'):
+                        for edge, edge_color in self.cumulative_edge_colors.items():
+                            if edge_color != 'gray' and edge not in current_colors:
+                                current_colors[edge] = edge_color
+                    
+                    # Display color classes for the current step
+                    if current_colors:  # Only display if we have colors
+                        self.display_color_classes(current_colors)
+                    
+                    # Show the right sidebar for non-final states too
+                    self.right_sidebar.setVisible(True)
 
                 # Regular state handling
                 left_nodes, right_nodes = nx.bipartite.sets(self.graph)
@@ -425,7 +513,11 @@ class App(QMainWindow):
                     augmenting_path=augmenting_path,
                     color=color
                 )
-                self.visualizer.update_step_info(self.current_step + 1, len(self.matching_states))
+                # Update step info - ensure it reflects the current step accurately
+                if hasattr(self, 'matching_states'):
+                    total_steps = len(self.matching_states)
+                    current = self.current_step + 1  # Add 1 since we're using 1-indexed display
+                    self.visualizer.update_step_info(current, total_steps)
             else:
                 print("Error: current_state is not a dictionary.")
         else:
@@ -466,32 +558,89 @@ class App(QMainWindow):
             color_matchings = {}
             color_order = []  # Keep track of the order colors appear
             
-            # Process states in order, keeping only the last matching for each color
-            for state in self.matching_states[:-1]:  # Skip final state
-                if isinstance(state, dict) and "matching" in state:
-                    color = state["color"]
-                    if color not in color_matchings:
-                        color_matchings[color] = state["matching"]
-                        color_order.append(color)  # Add color to order list when first seen
-                    else:
-                        # Update with the last matching for this color
-                        color_matchings[color] = state["matching"]
+            # Look for iteration matchings in the colorer if available
+            if hasattr(self, 'colorer') and hasattr(self.colorer, 'matching_states'):
+                print("Using colorer matching states")
+                matching_states = self.colorer.matching_states
+            else:
+                matching_states = self.matching_states
             
+            # Process states in order, keeping only the last matching for each color
+            for state in matching_states:
+                if isinstance(state, dict) and "matching" in state:
+                    color = state.get("color", "default")
+                    if color != "final":  # Skip the final state in the processing
+                        matching = state["matching"]
+                        if isinstance(matching, dict) and matching:  # Make sure it's a non-empty dict
+                            if color not in color_matchings:
+                                color_matchings[color] = matching
+                                color_order.append(color)  # Add color to order list when first seen
+                            else:
+                                # Update with the last matching for this color
+                                color_matchings[color] = matching
+            
+            print(f"Found {len(color_order)} color iterations")
+            print(f"Color matchings: {color_matchings}")
+            
+            # If no iterations found, try to extract data from the final state
+            if not color_order and len(matching_states) > 0:
+                final_state = matching_states[-1]
+                if isinstance(final_state, dict) and "matching" in final_state:
+                    matching = final_state["matching"]
+                    if isinstance(matching, dict):
+                        # Group by color
+                        edge_colors = {}
+                        for edge, color in matching.items():
+                            if isinstance(edge, tuple) and len(edge) == 2:
+                                if color not in edge_colors:
+                                    edge_colors[color] = []
+                                edge_colors[color].append(edge)
+                        
+                        # Use these color groups as iterations
+                        for i, (color, edges) in enumerate(edge_colors.items()):
+                            iteration_matching = {}
+                            for edge in edges:
+                                iteration_matching[edge[0]] = edge[1]
+                            color_matchings[color] = iteration_matching
+                            color_order.append(color)
+                            
             # Display matchings in the order colors appeared
             for i, color in enumerate(color_order):
                 matching = color_matchings[color]
                 matching_text += f"Iteration {i+1}:\n"
                 # Sort the matches for consistent display
-                sorted_matches = sorted([
-                    (f"L{left.split('_')[1]}", f"R{right.split('_')[1]}")
-                    for left, right in matching.items()
-                ])
+                sorted_matches = []
+                for left, right in matching.items():
+                    try:
+                        if isinstance(left, str) and isinstance(right, str):
+                            left_label = f"L{left.split('_')[1]}" if '_' in left else left
+                            right_label = f"R{right.split('_')[1]}" if '_' in right else right
+                            sorted_matches.append((left_label, right_label))
+                    except (IndexError, TypeError) as e:
+                        print(f"Error processing matching {left}-{right}: {e}")
+                sorted_matches.sort()
+                
                 for left, right in sorted_matches:
                     matching_text += f"{left}-{right}\n"
                 matching_text += "\n"  # Add space between iterations
             
-            # Update the sorted_edges_label with matching groups
-            self.sorted_edges_label.setText(matching_text)
+            # Don't use the sorted_edges_label which appears below the graph
+            # Instead, create a dedicated label in the right sidebar
+            
+            # Clear existing matching groups label if it exists
+            if hasattr(self, 'matching_groups_label'):
+                self.right_sidebar_layout.removeWidget(self.matching_groups_label)
+                self.matching_groups_label.deleteLater()
+            
+            # Add the new matching groups label to the right sidebar
+            self.matching_groups_label = QLabel(matching_text)
+            self.matching_groups_label.setWordWrap(True)
+            self.matching_groups_label.setContentsMargins(5, 5, 5, 5)
+            self.right_sidebar_layout.addWidget(self.matching_groups_label)
+            
+            # Make sure the sorted_edges_label is not visible
+            if hasattr(self, 'sorted_edges_label'):
+                self.sorted_edges_label.setVisible(False)
             
             # Create and show the explanation button if it doesn't exist
             if not hasattr(self, 'explanation_button'):
@@ -552,15 +701,33 @@ class App(QMainWindow):
                             matching_text += f"{left}-{right}\n"
                         matching_text += "\n"
                 
+                # Create a list of states for each iteration to be used by display_matching_groups
+                self.iteration_states = []
+                for color in color_order:
+                    if color in iteration_matchings:
+                        self.iteration_states.append({
+                            "matching": iteration_matchings[color],
+                            "color": color
+                        })
+                
                 # Create the final state with all colors
-                self.matching_states = [{
-                    "matching": edge_colors,  # Use original edge_colors here
+                final_edge_colors = {}
+                # Ensure we have the correct format (edge tuple -> color)
+                for edge, color in edge_colors.items():
+                    if isinstance(edge, tuple):
+                        final_edge_colors[edge] = color
+                    elif isinstance(color, str) and isinstance(edge, str):
+                        # Handle string format if present
+                        final_edge_colors[edge] = color
+                
+                self.matching_states = self.iteration_states + [{
+                    "matching": final_edge_colors,  # Use properly formatted edge_colors
                     "augmenting_path": None,
                     "color": "final",
                     "show_all_colors": True
                 }]
                 
-                self.current_step = 0
+                self.current_step = len(self.matching_states) - 1  # Show the final state
                 self.update_bipartite_visualization()
                 self.visualizer.draw_execution_time(self.colorer.execution_time)
                 
@@ -569,7 +736,11 @@ class App(QMainWindow):
                 self.next_button.setVisible(False)
                 
                 # Update and show matching groups
-                self.sorted_edges_label.setText(matching_text)
+                self.display_matching_groups()
+                
+                # Display color classes
+                self.display_color_classes(edge_colors)
+                
                 self.right_sidebar.setVisible(True)
                 
             except Exception as e:
@@ -615,6 +786,18 @@ class App(QMainWindow):
     def display_color_classes(self, edge_colors):
         # Group edges by color
         color_groups = {}
+        if not edge_colors:
+            print("Warning: No edge colors provided to display_color_classes")
+            # Try to get colors from the cumulative_edge_colors if available
+            if hasattr(self, 'cumulative_edge_colors') and self.cumulative_edge_colors:
+                print("Using cumulative_edge_colors as fallback")
+                edge_colors = self.cumulative_edge_colors
+            # Try to get colors from visualizer if available
+            elif hasattr(self.visualizer, 'final_edge_colors') and self.visualizer.final_edge_colors:
+                print("Using visualizer.final_edge_colors as fallback")
+                edge_colors = self.visualizer.final_edge_colors
+        
+        # Now populate the color groups
         for edge, color in edge_colors.items():
             if color not in color_groups:
                 color_groups[color] = []
@@ -622,15 +805,23 @@ class App(QMainWindow):
         
         # Format text with header and content in one string
         color_text = "Color Classes:\n\n"
-        for color, edges in color_groups.items():
-            color_text += f"{color} = "
-            formatted_edges = []
-            for edge in edges:
-                # Format the edge for display
-                formatted_edge = self.format_bipartite_edge(edge)
-                formatted_edges.append(formatted_edge)
-            color_text += ", ".join(formatted_edges)
-            color_text += "\n"
+        if not color_groups:
+            color_text += "No color classes to display.\n"
+        else:
+            for color, edges in color_groups.items():
+                if color == 'gray':  # Skip gray (uncolored) edges
+                    continue
+                color_text += f"{color} = "
+                formatted_edges = []
+                for edge in edges:
+                    # Format the edge for display
+                    try:
+                        formatted_edge = self.format_bipartite_edge(edge)
+                        formatted_edges.append(formatted_edge)
+                    except Exception as e:
+                        print(f"Error formatting edge {edge}: {e}")
+                color_text += ", ".join(formatted_edges)
+                color_text += "\n"
         
         # Clear existing content if needed
         if hasattr(self, 'color_classes_combined'):
@@ -644,16 +835,55 @@ class App(QMainWindow):
         self.right_sidebar_layout.addWidget(self.color_classes_combined)
 
         # Calculate maximum degree (∆)
-        max_degree = max(self.graph.degree(), key=lambda x: x[1])[1]
-        colors_used = len(color_groups)
+        # For bipartite graphs, we need to be more careful about the degree calculation
+        try:
+            degrees = dict(self.graph.degree())
+            if degrees:
+                max_degree = max(degrees.values())
+            else:
+                max_degree = 0
+                
+            # For bipartite graphs, also check the maximum number of edges incident to any node
+            if nx.is_bipartite(self.graph):
+                # Get the maximum number of edges with the same color incident to any node
+                node_color_counts = {}
+                for edge, color in edge_colors.items():
+                    if color != 'gray':  # Skip uncolored edges
+                        u, v = edge
+                        if u not in node_color_counts:
+                            node_color_counts[u] = set()
+                        if v not in node_color_counts:
+                            node_color_counts[v] = set()
+                        node_color_counts[u].add(color)
+                        node_color_counts[v].add(color)
+                
+                if node_color_counts:
+                    # The maximum degree is the max number of different colors at any node
+                    color_degree = max(len(colors) for colors in node_color_counts.values())
+                    max_degree = max(max_degree, color_degree)
+        except Exception as e:
+            print(f"Error calculating max degree: {e}")
+            max_degree = 3  # Default to 3 if we can't calculate (typical for small bipartite graphs)
+        
+        # Count the actual colors used (excluding 'gray' which is used for uncolored edges)
+        # and ensuring we count unique colors
+        colors_used = len([c for c in color_groups.keys() if c != 'gray'])
+        if colors_used == 0 and edge_colors:
+            # Fallback: count unique colors in edge_colors
+            colors_used = len(set([c for c in edge_colors.values() if c != 'gray']))
         
         # Create optimality message
-        if colors_used <= max_degree + 1:
-            optimality_text = (f"The graph was colored with {colors_used} colors which "
-                             f"is ∆+1 ({max_degree}+1) or less therefore the coloration was optimal")
+        if colors_used > 0:
+            if colors_used <= max_degree + 1:
+                optimality_text = (f"The graph was colored with {colors_used} "
+                                 f"colors which is ∆+1 ({max_degree}+1) or "
+                                 f"less therefore the coloration was optimal")
+            else:
+                optimality_text = (f"The graph was colored with {colors_used} "
+                                 f"colors which is more than ∆+1 ({max_degree}+1) "
+                                 f"therefore there is a better coloration to this graph")
         else:
-            optimality_text = (f"The graph was colored with {colors_used} colors which "
-                             f"is more than ∆+1 ({max_degree}+1) therefore there is a better coloration to this graph")
+            optimality_text = "No colors have been applied yet."
         
         # Clear existing content if needed
         if hasattr(self, 'optimality_label'):
