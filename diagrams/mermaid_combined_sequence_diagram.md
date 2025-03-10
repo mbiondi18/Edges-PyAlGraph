@@ -8,6 +8,7 @@ sequenceDiagram
     participant BGW as BipartiteGraphWindow
     participant GC as GraphColorer
     participant GV as GraphVisualizer
+    participant ROD as RearrangeOrderDialog
     participant SW as StatisticsWindow
     participant AEW as AlgorithmExplanationWindow
 
@@ -30,10 +31,28 @@ sequenceDiagram
         GW->>GW: Create graph
         GW->>App: Return graph data
         
-        User->>App: Select secuencial coloring
-        App->>GC: secuencial_coloring(graph, edges)
+        %% Regular graph coloring options
+        alt Default Order Coloring
+            User->>App: Select sequential coloring default order
+            App->>GC: secuencial_coloring(graph, edges)
+        else User Order Coloring
+            User->>App: Select sequential coloring user order
+            App->>GC: sequential_user_order_coloring(graph)
+        end
+        
         GC->>GC: Execute algorithm
         GC-->>App: Return edge_colors
+        
+        %% Optional order rearrangement for regular graph
+        opt Rearrange Edge Order
+            User->>App: Request to rearrange edge order
+            App->>ROD: Create(current_edges)
+            ROD-->>User: Show rearrangement dialog
+            User->>ROD: Rearrange edges and confirm
+            ROD-->>App: Return new edge order
+            App->>GC: sequential_user_order_coloring(graph) with new order
+            GC-->>App: Return updated edge_colors
+        end
         
         App->>GV: draw_graph(graph, edge_colors)
     
@@ -63,6 +82,17 @@ sequenceDiagram
         GC->>GC: Execute algorithm
         GC-->>App: Return edge_colors
         
+        %% Optional order rearrangement for bipartite graph
+        opt Rearrange Edge Order
+            User->>App: Request to rearrange edge order
+            App->>ROD: Create(current_edges)
+            ROD-->>User: Show rearrangement dialog
+            User->>ROD: Rearrange edges and confirm
+            ROD-->>App: Return new edge order
+            App->>GC: bipartite_user_order_coloring(graph, new_order)
+            GC-->>App: Return updated edge_colors
+        end
+        
         App->>GV: draw_bipartite_graph(graph, edge_colors)
         
         opt Step-by-Step View
@@ -91,14 +121,16 @@ sequenceDiagram
     AEW-->>App: Explanation window shown
 ```
 
-This comprehensive sequence diagram illustrates both the regular graph and bipartite graph workflows in a single diagram, showing how the application handles both paths. The diagram uses "alt" and "else" sections to represent the branching paths, and includes:
+This comprehensive sequence diagram illustrates both the regular graph and bipartite graph workflows in a single diagram, showing how the application handles both paths. The diagram uses "alt", "else", and "opt" sections to represent the branching paths, and includes:
 
 1. Initial application setup
 2. User selecting between regular and bipartite graph types
 3. Different graph creation processes for each type
-4. Different coloring algorithms for each type
-5. Common visualization, statistics, and explanation components
-
-For the bipartite path, it also shows the three different coloring algorithm options and the optional step-by-step visualization feature.
+4. Different coloring algorithms for each type:
+   - Regular graph: Default order and user order options
+   - Bipartite graph: Standard, degree-based, and user order options
+5. Optional order rearrangement functionality for both graph types
+6. Common visualization, statistics, and explanation components
+7. Optional step-by-step visualization for bipartite graphs
 
 The arrows indicate the direction of function calls and information flow, with solid arrows representing function calls and dashed arrows representing returns or responses. 
