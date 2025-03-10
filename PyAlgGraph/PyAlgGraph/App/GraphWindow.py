@@ -179,27 +179,25 @@ class GraphWindow(QMainWindow):
         start_vertex_coords = self.nodes[self.start_vertex]
         end_vertex_coords = self.nodes[end_vertex]
         if not self.graph.has_edge(self.start_vertex, end_vertex):
-            edge_item = QGraphicsLineItem(start_vertex_coords[0], start_vertex_coords[1], end_vertex_coords[0], end_vertex_coords[1])
+            edge_item = QGraphicsLineItem(start_vertex_coords[0], start_vertex_coords[1], 
+                                        end_vertex_coords[0], end_vertex_coords[1])
             self.scene.addItem(edge_item)
             self.edge_items[(self.start_vertex, end_vertex)] = edge_item
             self.graph.add_edge(self.start_vertex, end_vertex)
-            self.add_edge_order(self.start_vertex, end_vertex)
+            
+            # Store the edge creation order
+            if not hasattr(self, 'edge_creation_order'):
+                self.edge_creation_order = []
+            self.edge_creation_order.append((self.start_vertex, end_vertex))
 
     def add_edge_order(self, start_vertex, end_vertex):
         if self.use_user_order:
-            dialog = OrderDialog(self, self.used_orders)
-            if dialog.exec_():
-                order = dialog.get_order()
-                self.graph[start_vertex][end_vertex]['order'] = order
-                self.used_orders.append(order)
-                self.update_edge_orders_text()
-                print(f"Edge ({start_vertex}, {end_vertex}) order: {order}")
-            else:
-                # If the user cancels the dialog, remove the edge
-                self.graph.remove_edge(start_vertex, end_vertex)
-                edge_item = self.edge_items.pop((start_vertex, end_vertex), None)
-                if edge_item:
-                    self.scene.removeItem(edge_item)
+            # Automatically assign the next order number
+            order = len(self.used_orders) + 1
+            self.graph[start_vertex][end_vertex]['order'] = order
+            self.used_orders.append(order)
+            self.update_edge_orders_text()
+            print(f"Edge ({start_vertex}, {end_vertex}) order: {order}")
         else:
             # If not using user order, just add the edge without an order
             self.graph[start_vertex][end_vertex]['order'] = len(self.graph.edges())

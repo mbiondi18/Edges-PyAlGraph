@@ -1,5 +1,5 @@
 import networkx as nx
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTextEdit, QPushButton, QMessageBox
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTextEdit, QPushButton, QMessageBox, QScrollArea, QGroupBox
 import os
 
 class StatisticsWindow(QWidget):
@@ -7,7 +7,7 @@ class StatisticsWindow(QWidget):
         super().__init__()
         self.app = app
         self.setWindowTitle("Graph Statistics")
-        self.setGeometry(300, 300, 400, 300)
+        self.setGeometry(300, 300, 500, 500)
 
         layout = QVBoxLayout()
 
@@ -34,6 +34,8 @@ class StatisticsWindow(QWidget):
 
         self.sorted_edges_label = QLabel()
         layout.addWidget(self.sorted_edges_label)
+
+        self.add_matching_statistics()
 
         self.setLayout(layout)
 
@@ -97,3 +99,59 @@ class StatisticsWindow(QWidget):
         
         sorted_edges = self.get_sorted_edges()
         self.sorted_edges_label.setText(f"Sorted Edges:\n{sorted_edges}")
+
+    def add_matching_statistics(self):
+        """Add statistics about bipartite matching iterations."""
+        # Create a group box for matching statistics
+        matching_group = QGroupBox("Bipartite Matching Statistics")
+        matching_layout = QVBoxLayout()
+        
+        # Process matching states to extract matching data by iteration
+        if hasattr(self.app, 'matching_states'):
+            # Track the last seen matching for each iteration color
+            color_matchings = {}
+            color_order = []  # Keep track of the order colors appear
+            
+            # Process states in order, keeping only the last matching for each color
+            for state in self.app.matching_states:
+                if isinstance(state, dict) and "matching" in state:
+                    color = state.get("color")
+                    
+                    # Skip the final state or states without color
+                    if color is None or color == "final" or state.get("show_all_colors", False):
+                        continue
+                    
+                    if color not in color_matchings:
+                        color_matchings[color] = state["matching"]
+                        color_order.append(color)  # Add color to order list when first seen
+                    else:
+                        # Update with the last matching for this color
+                        color_matchings[color] = state["matching"]
+            
+            # Display matchings in the order colors appeared
+            for i, color in enumerate(color_order):
+                matching = color_matchings[color]
+                
+                # Create a label for this iteration
+                iteration_label = QLabel(f"<b>Iteration {i+1} ({color}):</b>")
+                matching_layout.addWidget(iteration_label)
+                
+                # Sort the matches for consistent display
+                sorted_matches = sorted([
+                    (f"L{left.split('_')[1]}", f"R{right.split('_')[1]}")
+                    for left, right in matching.items()
+                ])
+                
+                # Add each match as a separate label
+                for left, right in sorted_matches:
+                    match_label = QLabel(f"    {left}-{right}")
+                    matching_layout.addWidget(match_label)
+                
+                # Add some spacing between iterations
+                spacer = QLabel("")
+                matching_layout.addWidget(spacer)
+        else:
+            matching_layout.addWidget(QLabel("No matching data available."))
+        
+        matching_group.setLayout(matching_layout)
+        self.content_layout.addWidget(matching_group)

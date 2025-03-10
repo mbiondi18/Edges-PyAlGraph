@@ -1,0 +1,82 @@
++------------------------+        +-------------------------+
+|                        |        |                         |
+|          App           |<------>|   BipartiteGraphWindow  |
+|                        |        |                         |
++------------------------+        +-------------------------+
+  ^      ^      ^     ^                       |
+  |      |      |     |                       |
+  |      |      |     |                       v
+  |      |      |     |           +-------------------------+
+  |      |      |     |           |                         |
+  |      |      |     +---------->|     GraphVisualizer     |
+  |      |      |                 |                         |
+  |      |      |                 +-------------------------+
+  |      |      |                             ^
+  |      |      |                             |
+  |      |      v                             |
+  |      |    +-------------------------+     |
+  |      |    |                         |     |
+  |      +--->|      GraphColorer       |-----+
+  |           |                         |
+  |           +-------------------------+
+  |                      ^
+  |                      |
+  v                      v
++-------------------------+     +-------------------------+
+|                         |     |                         |
+|    StatisticsWindow     |     |  AlgorithmExplanation   |
+|                         |     |        Window           |
++-------------------------+     +-------------------------+
+
+COMPONENT INTERACTION IN PyAlgGraph
+===================================
+
+1. USER INTERACTION FLOW
+------------------------
+User -> App: Launches application
+User -> App: Requests to create bipartite graph
+App -> BipartiteGraphWindow: Creates window for graph creation
+User -> BipartiteGraphWindow: Creates graph (adds vertices & edges)
+BipartiteGraphWindow -> App: Returns created graph
+User -> App: Requests to color graph
+App -> GraphColorer: Requests coloring algorithm execution
+GraphColorer -> App: Returns coloring results
+App -> GraphVisualizer: Requests visualization of colored graph
+GraphVisualizer -> User: Displays colored graph
+User -> App: Requests statistics
+App -> StatisticsWindow: Shows graph statistics
+User -> App: Requests algorithm explanation
+App -> AlgorithmExplanationWindow: Shows algorithm details
+
+2. DATA FLOW
+------------
+BipartiteGraphWindow --[Graph Data]--> App
+App --[Graph Data]--> GraphColorer
+GraphColorer --[Coloring Results]--> App
+App --[Colored Graph]--> GraphVisualizer
+App --[Coloring Results]--> StatisticsWindow
+App --[Algorithm Info]--> AlgorithmExplanationWindow
+
+3. KEY FUNCTION CALLS
+---------------------
+App -> BipartiteGraphWindow: open_bipartite_graph_window()
+BipartiteGraphWindow -> App: create_bipartite_graph()
+App -> GraphColorer: bipartite_coloring(graph)
+                     bipartite_degree_coloring(graph)
+                     bipartite_user_order_coloring(graph, edge_order)
+GraphColorer -> App: Return edge_colors
+App -> GraphVisualizer: draw_bipartite_graph(graph, edge_colors)
+                        draw_bipartite_matching()
+App -> StatisticsWindow: update_statistics()
+StatisticsWindow -> App: get_colors_used(), get_algorithm_used(), get_connections()
+App -> AlgorithmExplanationWindow: show_algorithm_explanation()
+
+4. COMPONENT RESPONSIBILITIES
+----------------------------
+App: Central control, coordinates all other components
+BipartiteGraphWindow: UI for creating bipartite graphs
+GraphWindow: UI for creating general graphs
+GraphColorer: Algorithms for coloring graphs
+GraphVisualizer: Visualization of graphs and colorings
+StatisticsWindow: Display of statistics about colorings
+AlgorithmExplanationWindow: Explanations of algorithms 

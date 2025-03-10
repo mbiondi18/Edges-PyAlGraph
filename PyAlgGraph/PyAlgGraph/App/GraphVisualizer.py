@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QWidget, QLabel
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import networkx as nx
+from matplotlib.lines import Line2D
 
 class GraphVisualizer(QWidget):
     def __init__(self, parent=None):
@@ -140,80 +141,133 @@ class GraphVisualizer(QWidget):
         self.canvas.draw()
         self.positions = pos
 
-    def draw_bipartite_matching(self, graph, assignments, unassigned_left, unassigned_right, pos, augmenting_path=None):
+    def draw_bipartite_matching(self, graph, assignments, unassigned_left, unassigned_right, pos, augmenting_path=None, color='r'):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         
+        # Draw nodes
         left_nodes = [n for n in graph.nodes() if n.startswith('left_')]
         right_nodes = [n for n in graph.nodes() if n.startswith('right_')]
-
-        # Adjust node positions
-        max_nodes = max(len(left_nodes), len(right_nodes))
+        
+        # Adjust node positions - NEW POSITIONING LOGIC
+        # Calculate separate positions for each side, distributing evenly along the full height
+        vertical_range = 0.9  # Use 90% of the vertical space (from 0.05 to 0.95)
+        top_margin = 0.95    # Position of the topmost node
+        
+        # For left nodes
         for i, node in enumerate(left_nodes):
-            pos[node] = (-0.35, 1 - (i / (max_nodes - 1)) if max_nodes > 1 else 0.5)
+            if len(left_nodes) > 1:
+                # Distribute evenly from top to bottom
+                y_pos = top_margin - (i * vertical_range / (len(left_nodes) - 1))
+            else:
+                # Single node should be centered
+                y_pos = 0.5
+            pos[node] = (-0.35, y_pos)
+        
+        # For right nodes
         for i, node in enumerate(right_nodes):
-            pos[node] = (0.35, 1 - (i / (max_nodes - 1)) if max_nodes > 1 else 0.5)
+            if len(right_nodes) > 1:
+                # Distribute evenly from top to bottom
+                y_pos = top_margin - (i * vertical_range / (len(right_nodes) - 1))
+            else:
+                # Single node should be centered
+                y_pos = 0.5
+            pos[node] = (0.35, y_pos)
 
         # Draw nodes
-        node_size = 1000
+        node_size = 500
         nx.draw_networkx_nodes(graph, pos, nodelist=left_nodes, node_color='lightblue', ax=ax, node_size=node_size)
         nx.draw_networkx_nodes(graph, pos, nodelist=right_nodes, node_color='lightgreen', ax=ax, node_size=node_size)
-        nx.draw_networkx_nodes(graph, pos, nodelist=list(unassigned_left) + list(unassigned_right), node_color='red', ax=ax, node_size=node_size)
+        
+        # Only draw unassigned nodes in red if not in final state
+        if not (isinstance(assignments, dict) and assignments.get("show_all_colors", False)):
+            nx.draw_networkx_nodes(graph, pos, nodelist=list(unassigned_left) + list(unassigned_right), 
+                                 node_color='red', ax=ax, node_size=node_size)
 
-        # Draw edges
-        all_edges = list(graph.edges())
-        matched_edges = [(left, right) for left, right in assignments.items()]
-        unmatched_edges = [edge for edge in all_edges if edge not in matched_edges and edge[::-1] not in matched_edges]
-
-        # Draw unmatched edges
-        nx.draw_networkx_edges(graph, pos, edgelist=unmatched_edges, edge_color='gray', style='dashed', ax=ax, width=1.0)
-
-        if augmenting_path:
-            # Create path edges
-            path_edges = list(zip(augmenting_path[:-1], augmenting_path[1:]))
-            
-            # Separate matched edges into those in the augmenting path and those not
-            matched_edges_in_path = [edge for edge in matched_edges if edge in path_edges or edge[::-1] in path_edges]
-            matched_edges_not_in_path = [edge for edge in matched_edges if edge not in matched_edges_in_path and edge[::-1] not in matched_edges_in_path]
-            
-            # Draw matched edges not in path
-            nx.draw_networkx_edges(graph, pos, edgelist=matched_edges_not_in_path, edge_color='r', ax=ax, width=2.0)
-            
-            # Draw augmenting path with blue dotted lines first
-            nx.draw_networkx_edges(graph, pos, edgelist=path_edges, edge_color='b', ax=ax, width=1.5, style='--')
-            
-            # Draw matched edges in path with orange color last (on top)
-            nx.draw_networkx_edges(graph, pos, edgelist=matched_edges_in_path, edge_color='orange', ax=ax, width=3.5)
+        # Check if this is the final state showing all colors
+        if isinstance(assignments, dict) and assignments.get("show_all_colors", False):
+            # Draw all edges with their final colors
+            if hasattr(self, 'final_edge_colors'):
+                # Get unique colors in the order they were added
+                unique_colors = sorted(set(self.final_edge_colors.values()))
+                
+                # Draw edges in order of iterations (removed legend creation)
+                for edge, edge_color in sorted(self.final_edge_colors.items(), 
+                                             key=lambda x: unique_colors.index(x[1])):
+                    try:
+                        nx.draw_networkx_edges(graph, pos, edgelist=[edge], 
+                                             edge_color=edge_color, 
+                                             ax=ax, 
+                                             width=2.5)
+                    except KeyError:
+                        reversed_edge = (edge[1], edge[0])
+                        nx.draw_networkx_edges(graph, pos, edgelist=[reversed_edge], 
+                                             edge_color=edge_color, 
+                                             ax=ax, 
+                                             width=2.5)
+                
+                ax.set_title("Final Coloring - All Iterations Combined", pad=20)
         else:
-            # Draw all matched edges in red if no augmenting path
-            nx.draw_networkx_edges(graph, pos, edgelist=matched_edges, edge_color='r', ax=ax, width=2.0)
+            # Original drawing code for intermediate states
+            all_edges = list(graph.edges())
+            matched_edges = [(left, right) for left, right in assignments.items()]
+            
+            # Only show dotted lines for edges that haven't been colored in any iteration
+            if hasattr(self, 'final_edge_colors'):
+                unmatched_edges = [edge for edge in all_edges 
+                                 if edge not in matched_edges 
+                                 and edge[::-1] not in matched_edges
+                                 and edge not in self.final_edge_colors
+                                 and edge[::-1] not in self.final_edge_colors]
+            else:
+                unmatched_edges = [edge for edge in all_edges 
+                                 if edge not in matched_edges 
+                                 and edge[::-1] not in matched_edges]
 
-        # Draw labels
+            # Draw previously colored edges (without dotted lines for colored edges)
+            if hasattr(self, 'final_edge_colors'):
+                for edge, edge_color in self.final_edge_colors.items():
+                    if edge in matched_edges or edge[::-1] in matched_edges:
+                        nx.draw_networkx_edges(graph, pos, edgelist=[edge], 
+                                             edge_color=edge_color, ax=ax, width=2.0)
+
+            # Draw unmatched edges (only those that haven't been colored in any iteration)
+            nx.draw_networkx_edges(graph, pos, edgelist=unmatched_edges, 
+                                 edge_color='gray', style='dashed', ax=ax, width=1.0)
+
+            if augmenting_path:
+                # Create path edges
+                path_edges = list(zip(augmenting_path[:-1], augmenting_path[1:]))
+                
+                # Separate matched edges into those in the augmenting path and those not
+                matched_edges_in_path = [edge for edge in matched_edges if edge in path_edges or edge[::-1] in path_edges]
+                matched_edges_not_in_path = [edge for edge in matched_edges if edge not in matched_edges_in_path and edge[::-1] not in matched_edges_in_path]
+                
+                # Draw matched edges not in path
+                nx.draw_networkx_edges(graph, pos, edgelist=matched_edges_not_in_path, edge_color=color, ax=ax, width=2.0)
+                
+                # Draw augmenting path with blue dotted lines first
+                nx.draw_networkx_edges(graph, pos, edgelist=path_edges, edge_color='b', ax=ax, width=1.5, style='--')
+                
+                # Draw matched edges in path with orange color last (on top)
+                nx.draw_networkx_edges(graph, pos, edgelist=matched_edges_in_path, edge_color='orange', ax=ax, width=3.5)
+            else:
+                # Draw all matched edges in the specified color if no augmenting path
+                nx.draw_networkx_edges(graph, pos, edgelist=matched_edges, edge_color=color, ax=ax, width=2.0)
+
+            # Store the colors of the current matched edges
+            if not hasattr(self, 'final_edge_colors'):
+                self.final_edge_colors = {}
+            for edge in matched_edges:
+                self.final_edge_colors[edge] = color
+
+        # Common drawing code for both cases - CHANGED font_color to 'black'
         labels = {node: node.split('_')[1] for node in graph.nodes()}
-        for node, (x, y) in pos.items():
-            label = labels[node]
-            ax.text(x, y, label, fontsize=14, ha='center', va='center', color='black', fontweight='bold')
+        nx.draw_networkx_labels(graph, pos, labels, ax=ax, font_size=10, font_color='black')
 
-        ax.set_title("Bipartite Matching", fontsize=16)
         ax.set_axis_off()
         ax.set_xlim(-0.5, 0.5)
         ax.set_ylim(-0.1, 1.1)
-
-        # Update legend
-        ax.plot([], [], 'o', color='lightblue', label='Left Nodes', markersize=10)
-        ax.plot([], [], 'o', color='lightgreen', label='Right Nodes', markersize=10)
-        ax.plot([], [], 'o', color='red', label='Unassigned Nodes', markersize=10)
-        ax.plot([], [], '-r', label='Matched Edges', linewidth=2)
-        ax.plot([], [], '--', color='gray', label='Unmatched Edges', linewidth=1)
-        if augmenting_path:
-            ax.plot([], [], '-', color='orange', label='Previous Matching in Path', linewidth=2.5)
-            ax.plot([], [], '--b', label='Augmenting Path', linewidth=2)
-        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
-
-        # Add augmenting path text description
-        if augmenting_path:
-            path_description = " → ".join(f"{'L' if node.startswith('left') else 'R'}{node.split('_')[1]}" for node in augmenting_path)
-            ax.text(0, -0.1, f"Augmenting Path: {path_description}", ha='center', va='center', fontsize=12, fontweight='bold')
 
         self.figure.tight_layout()
         self.canvas.draw()
@@ -226,6 +280,70 @@ class GraphVisualizer(QWidget):
             self.positions = nx.spring_layout(graph)
         return self.positions
 
-
-
-
+    def draw_bipartite_degree_coloring(self, graph, edge_colors, pos=None):
+        """Draw bipartite graph with degree-based edge coloring."""
+        print("Starting draw_bipartite_degree_coloring")
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        
+        # Get left and right node sets
+        left_nodes = [n for n, d in graph.nodes(data=True) if d.get('bipartite') == 0]
+        right_nodes = [n for n, d in graph.nodes(data=True) if d.get('bipartite') == 1]
+        
+        # If positions are not provided or are out of bounds, create new ones
+        if pos is None or any(abs(x) > 1 or abs(y) > 1 for x, y in pos.values()):
+            # Calculate positions
+            max_count = max(len(left_nodes), len(right_nodes))
+            pos = {}
+            # Position left nodes
+            for i, node in enumerate(left_nodes):
+                y_pos = 0.9 - (i * 0.8 / (max_count - 1 if max_count > 1 else 1))
+                pos[node] = (-0.4, y_pos)
+            # Position right nodes
+            for i, node in enumerate(right_nodes):
+                y_pos = 0.9 - (i * 0.8 / (max_count - 1 if max_count > 1 else 1))
+                pos[node] = (0.4, y_pos)
+        
+        print(f"Node positions: {pos}")
+        
+        # Draw nodes with larger size and different colors
+        nx.draw_networkx_nodes(graph, pos, nodelist=left_nodes, node_color='lightblue', 
+                              node_size=500, ax=ax)
+        nx.draw_networkx_nodes(graph, pos, nodelist=right_nodes, node_color='lightgreen', 
+                              node_size=500, ax=ax)
+        
+        # Draw edges with their colors
+        edge_colors_list = []
+        edge_list = []
+        for edge in graph.edges():
+            edge_tuple = tuple(sorted(edge))
+            if edge_tuple in edge_colors:
+                edge_list.append(edge)
+                edge_colors_list.append(edge_colors[edge_tuple])
+        
+        if edge_list:  # Only draw edges if there are any
+            nx.draw_networkx_edges(graph, pos,
+                                 edgelist=edge_list,
+                                 edge_color=edge_colors_list,
+                                 width=2.0,
+                                 ax=ax)
+        
+        # Draw node labels with black text
+        labels = {node: node.split('_')[1] for node in graph.nodes()}
+        nx.draw_networkx_labels(graph, pos, labels, ax=ax, font_size=10, font_color='black')
+        
+        # Set the figure background to white
+        ax.set_facecolor('white')
+        self.figure.set_facecolor('white')
+        
+        # Adjust plot limits
+        ax.set_axis_off()
+        ax.set_xlim(-0.5, 0.5)
+        ax.set_ylim(0, 1)
+        
+        # Ensure proper layout and draw
+        self.figure.tight_layout()
+        self.canvas.draw()
+        self.positions = pos  # Save positions for future use
+        
+        print("Finished drawing")

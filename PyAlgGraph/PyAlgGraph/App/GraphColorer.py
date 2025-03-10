@@ -14,35 +14,44 @@ class GraphColorer:
     def secuencial_coloring(self, graph: nx.Graph, edges: list):
         start_time = time.time()
         self.edge_colors = {}  # Store edge colors as class attribute
-
-        def edge_weight(edge):
-            return graph.degree(edge[0]) + graph.degree(edge[1])
-
-        # Sort edges based on the sum of degrees of incident vertices (descending order)
-        self.sorted_edges = sorted(edges, key=edge_weight, reverse=True)
-
-        for u, v in self.sorted_edges:
-            available_colors = [True] * len(colors)
-
-            # Check colors of adjacent edges
-            for w in graph.neighbors(u):
-                edge = (u, w) if u < w else (w, u)
-                if edge in self.edge_colors:
-                    color_index = colors.index(self.edge_colors[edge])
-                    available_colors[color_index] = False
-            for w in graph.neighbors(v):
-                edge = (v, w) if v < w else (w, v)
-                if edge in self.edge_colors:
-                    color_index = colors.index(self.edge_colors[edge])
-                    available_colors[color_index] = False
-
-            # Assign the first available color
-            for i, is_available in enumerate(available_colors):
-                if is_available:
-                    edge_color = colors[i]
-                    self.edge_colors[(u, v)] = edge_color
-                    break
-
+        
+        # Get vertices sorted by degree (highest to lowest)
+        vertices = sorted(graph.nodes(), key=lambda x: graph.degree(x), reverse=True)
+        self.sorted_edges = []  # Will store edges in order of coloring
+        
+        # Process vertices in order of decreasing degree
+        for vertex in vertices:
+            # Get all uncolored edges connected to this vertex
+            vertex_edges = [(vertex, neighbor) for neighbor in graph.neighbors(vertex)
+                           if (vertex, neighbor) not in self.edge_colors 
+                           and (neighbor, vertex) not in self.edge_colors]
+            
+            # Color each uncolored edge connected to this vertex
+            for u, v in vertex_edges:
+                # Ensure consistent edge representation (smaller vertex first)
+                edge = (u, v) if u < v else (v, u)
+                if edge not in self.edge_colors:
+                    available_colors = [True] * len(colors)
+                    
+                    # Check colors of adjacent edges
+                    for w in graph.neighbors(u):
+                        adj_edge = (u, w) if u < w else (w, u)
+                        if adj_edge in self.edge_colors:
+                            color_index = colors.index(self.edge_colors[adj_edge])
+                            available_colors[color_index] = False
+                    for w in graph.neighbors(v):
+                        adj_edge = (v, w) if v < w else (w, v)
+                        if adj_edge in self.edge_colors:
+                            color_index = colors.index(self.edge_colors[adj_edge])
+                            available_colors[color_index] = False
+                    
+                    # Assign the first available color
+                    for i, is_available in enumerate(available_colors):
+                        if is_available:
+                            self.edge_colors[edge] = colors[i]
+                            self.sorted_edges.append(edge)
+                            break
+        
         end_time = time.time()
         self.execution_time = end_time - start_time
         self.colors_used = len(set(self.edge_colors.values()))
@@ -76,57 +85,120 @@ class GraphColorer:
         self.algorithm_used = "Bipartite Coloring"
         return edge_colors
 
+    def bipartite_degree_coloring(self, graph: nx.Graph):
+        """Color edges of a bipartite graph based on vertex degrees."""
+        start_time = time.perf_counter()
+        self.edge_colors = {}
+        self.sorted_edges = []  # Store edges in order of coloring
+        
+        try:
+            # Get left and right node sets using bipartite sets
+            left_nodes, right_nodes = nx.bipartite.sets(graph)
+            
+            # Sort vertices by degree (highest to lowest)
+            vertices = sorted(graph.nodes(), key=lambda x: graph.degree(x), reverse=True)
+            
+            # Process vertices in order of decreasing degree
+            for vertex in vertices:
+                # Get all uncolored edges connected to this vertex
+                vertex_edges = [(vertex, neighbor) for neighbor in graph.neighbors(vertex)
+                               if tuple(sorted((vertex, neighbor))) not in self.edge_colors]
+                
+                # Color each uncolored edge
+                for u, v in vertex_edges:
+                    edge = tuple(sorted((u, v)))  # Ensure consistent edge representation
+                    if edge not in self.edge_colors:
+                        available_colors = [True] * len(colors)
+                        
+                        # Check colors of adjacent edges
+                        for w in graph.neighbors(u):
+                            adj_edge = tuple(sorted((u, w)))
+                            if adj_edge in self.edge_colors:
+                                color_index = colors.index(self.edge_colors[adj_edge])
+                                available_colors[color_index] = False
+                                
+                        for w in graph.neighbors(v):
+                            adj_edge = tuple(sorted((v, w)))
+                            if adj_edge in self.edge_colors:
+                                color_index = colors.index(self.edge_colors[adj_edge])
+                                available_colors[color_index] = False
+                        
+                        # Assign first available color
+                        for i, is_available in enumerate(available_colors):
+                            if is_available:
+                                self.edge_colors[edge] = colors[i]
+                                self.sorted_edges.append(edge)
+                                break
+            
+            end_time = time.perf_counter()
+            self.execution_time = end_time - start_time
+            self.colors_used = len(set(self.edge_colors.values()))
+            self.algorithm_used = "Bipartite Degree-Based Coloring"
+            return self.edge_colors
+            
+        except Exception as e:
+            print(f"Error in bipartite_degree_coloring: {str(e)}")
+            raise
 
     def maximal_matching_bipartite(self, graph: nx.Graph):
         start_time = time.perf_counter()
         
         left_nodes, right_nodes = nx.bipartite.sets(graph)
-        print("Left nodes:", left_nodes)
-        print("Right nodes:", right_nodes)
-        
-        matching = {}
         matching_states = []
-
-        # Initial greedy matching
-        for left in left_nodes:
-            for right in graph.neighbors(left):
-                if left not in matching and right not in matching.values():
-                    matching[left] = right
-                    break
-        
-        print("Initial matching:", matching)
-        matching_states.append({"matching": matching.copy(), "augmenting_path": None})
+        edge_colors = {}
+        color_index = 0
 
         while True:
-            path = self.find_augmenting_path(graph, matching, left_nodes, right_nodes)
-            if not path:
+            matching = {}
+            # Initial greedy matching
+            for left in left_nodes:
+                for right in graph.neighbors(left):
+                    if left not in matching and right not in matching.values():
+                        matching[left] = right
+                        break
+            
+            if not matching:
                 break
+
+            # Store the initial state with unmatched nodes
+            matching_states.append({"matching": matching.copy(), "augmenting_path": None, "color": colors[color_index]})
+
+            while True:
+                path = self.find_augmenting_path(graph, matching, left_nodes, right_nodes)
+                if not path:
+                    break
+                
+                # Update the matching
+                for i in range(0, len(path), 2):
+                    left, right = path[i], path[i+1]
+                    if left in matching:
+                        del matching[left]
+                    if right in matching.values():
+                        del matching[list(matching.keys())[list(matching.values()).index(right)]]
+                    matching[left] = right
             
-            print("Augmenting path found:", path)
+            # Store the final state after the augmenting path
+            matching_states.append({"matching": matching.copy(), "augmenting_path": None, "color": colors[color_index]})
             
-            # Store the state with the augmenting path
-            matching_states.append({"matching": matching.copy(), "augmenting_path": path})
+            # Color the matched edges
+            for left, right in matching.items():
+                edge_colors[(left, right)] = colors[color_index]
             
-            # Update the matching
-            for i in range(0, len(path), 2):
-                left, right = path[i], path[i+1]
-                if left in matching:
-                    del matching[left]
-                if right in matching.values():
-                    del matching[list(matching.keys())[list(matching.values()).index(right)]]
-                matching[left] = right
+            color_index += 1
+
+            # Remove matched edges from the graph
+            for left, right in matching.items():
+                graph.remove_edge(left, right)
             
-            print("Updated matching:", matching)
-            
-        # Add the final matching state without an augmenting path
-        matching_states.append({"matching": matching.copy(), "augmenting_path": None})
+            if not graph.edges():
+                break
         
         end_time = time.perf_counter()
         self.execution_time = end_time - start_time
-        self.colors_used = len(set(matching.values()))
+        self.colors_used = color_index
         self.algorithm_used = "Augmenting Path Algorithm"
         
-        return matching_states
+        return matching_states, edge_colors
 
     def find_augmenting_path(self, graph, matching, left_nodes, right_nodes):
         all_augmenting_paths = []
@@ -160,31 +232,85 @@ class GraphColorer:
 
     def sequential_user_order_coloring(self, graph: nx.Graph):
         start_time = time.perf_counter()
-        edge_colors = {}
-        ordered_edges = sorted(graph.edges(data=True), key=lambda x: x[2]['order'])
-
-        for u, v, _ in ordered_edges:
+        self.edge_colors = {}  # Use class attribute to store colors
+        
+        # Process edges in exactly the order they were created
+        for u, v in self.sorted_edges:
             available_colors = [True] * len(colors)
-
-            for w in graph.neighbors(u):
-                edge = (u, w) if u < w else (w, u)
-                if edge in edge_colors:
-                    color_index = colors.index(edge_colors[edge])
+            
+            # Check ALL adjacent edges of both vertices
+            # For vertex u
+            for neighbor in graph.neighbors(u):
+                adj_edge = tuple(sorted([u, neighbor]))  # Ensure consistent edge representation
+                if adj_edge in self.edge_colors:
+                    color_index = colors.index(self.edge_colors[adj_edge])
                     available_colors[color_index] = False
-            for w in graph.neighbors(v):
-                edge = (v, w) if v < w else (w, v)
-                if edge in edge_colors:
-                    color_index = colors.index(edge_colors[edge])
+            
+            # For vertex v
+            for neighbor in graph.neighbors(v):
+                adj_edge = tuple(sorted([v, neighbor]))  # Ensure consistent edge representation
+                if adj_edge in self.edge_colors:
+                    color_index = colors.index(self.edge_colors[adj_edge])
                     available_colors[color_index] = False
-
+            
+            # Assign first available color
+            edge = tuple(sorted([u, v]))  # Ensure consistent edge representation
             for i, is_available in enumerate(available_colors):
                 if is_available:
-                    edge_color = colors[i]
-                    edge_colors[(u, v)] = edge_color
+                    self.edge_colors[edge] = colors[i]
                     break
-
+        
         end_time = time.perf_counter()
         self.execution_time = end_time - start_time
-        self.colors_used = len(set(edge_colors.values()))
+        self.colors_used = len(set(self.edge_colors.values()))
         self.algorithm_used = "Sequential User Order Coloring"
-        return edge_colors
+        return self.edge_colors
+
+    def bipartite_user_order_coloring(self, graph: nx.Graph, edge_order=None):
+        """Color edges of a bipartite graph based on user-defined order."""
+        start_time = time.perf_counter()
+        self.edge_colors = {}
+        
+        # Use provided edge order or default to class attribute if available
+        if edge_order:
+            self.sorted_edges = edge_order
+        elif not hasattr(self, 'sorted_edges'):
+            # If no order is provided, create a default order
+            self.sorted_edges = list(graph.edges())
+        
+        try:
+            # Process edges in the specified order
+            for u, v in self.sorted_edges:
+                edge = tuple(sorted((u, v)))  # Ensure consistent edge representation
+                if edge not in self.edge_colors:
+                    available_colors = [True] * len(colors)
+                    
+                    # Check colors of adjacent edges to u
+                    for w in graph.neighbors(u):
+                        adj_edge = tuple(sorted((u, w)))
+                        if adj_edge in self.edge_colors:
+                            color_index = colors.index(self.edge_colors[adj_edge])
+                            available_colors[color_index] = False
+                    
+                    # Check colors of adjacent edges to v
+                    for w in graph.neighbors(v):
+                        adj_edge = tuple(sorted((v, w)))
+                        if adj_edge in self.edge_colors:
+                            color_index = colors.index(self.edge_colors[adj_edge])
+                            available_colors[color_index] = False
+                    
+                    # Assign first available color
+                    for i, is_available in enumerate(available_colors):
+                        if is_available:
+                            self.edge_colors[edge] = colors[i]
+                            break
+            
+            end_time = time.perf_counter()
+            self.execution_time = end_time - start_time
+            self.colors_used = len(set(self.edge_colors.values()))
+            self.algorithm_used = "Bipartite User Order Coloring"
+            return self.edge_colors
+            
+        except Exception as e:
+            print(f"Error in bipartite_user_order_coloring: {str(e)}")
+            raise

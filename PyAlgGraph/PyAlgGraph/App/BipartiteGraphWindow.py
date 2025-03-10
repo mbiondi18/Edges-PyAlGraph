@@ -9,6 +9,9 @@ class BipartiteGraphWindow(QMainWindow):
         self.app = app
         self.graph = nx.DiGraph()
         
+        # Add edge creation order tracking
+        self.edge_creation_order = []
+        
         self.resize(1600, 900)
 
         self.scene = QGraphicsScene()
@@ -194,6 +197,7 @@ class BipartiteGraphWindow(QMainWindow):
                     print(f"Edge created between {start_vertex} and {end_vertex}")
                     print(f"Edge coordinates: ({start_x}, {start_y}) to ({end_x}, {end_y})")
                     self.scene.update()  # Force update of the scene
+                    self.edge_creation_order.append((start_vertex, end_vertex))
                 else:
                     print(f"Edge between {start_vertex} and {end_vertex} already exists")
             else:
