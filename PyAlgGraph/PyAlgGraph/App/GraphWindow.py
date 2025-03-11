@@ -1,14 +1,14 @@
 from PyQt5.QtWidgets import QVBoxLayout,QMainWindow, QPushButton, QGraphicsScene, QGraphicsView, QGraphicsEllipseItem, QComboBox, QGraphicsTextItem, QLabel, QGraphicsLineItem
 from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QPen, QBrush, QPainter, QFont
-from WeightDialog import OrderDialog
 from GraphVisualizer import GraphVisualizer
 from GraphColorer import GraphColorer
 from GraphAnalyzer import GraphAnalyzer
 from GraphIO import GraphIO
-from Tutorial import Tutorial
 from StepByStepSolver import StepByStepSolver
 import networkx as nx
+from styles import get_graph_window_style
+import os
 
 class GraphWindow(QMainWindow):
     def __init__(self, app, graph, use_user_order, parent=None):
@@ -18,11 +18,13 @@ class GraphWindow(QMainWindow):
         self.use_user_order = use_user_order
         
         self.resize(1600, 900)
+        
+        # Apply custom styles
+        self.setStyleSheet(get_graph_window_style())
 
         self.colorer = GraphColorer(self.graph)
         self.analyzer = GraphAnalyzer()
         self.io = GraphIO()
-        self.tutorial = Tutorial()
         self.solver = StepByStepSolver()
 
         self.scene = QGraphicsScene()
@@ -72,12 +74,6 @@ class GraphWindow(QMainWindow):
         self.layout1.addWidget(self.delete_button)
         self.layout1.addWidget(self.create_graph_button)
         self.setLayout(self.layout1)
-
-        #self.vertex_weight_label = QLabel(self)
-        #self.vertex_weight_label.setGeometry(10, 430, 150, 200)
-
-        #self.edge_weight_label = QLabel(self)
-        #self.edge_weight_label.setGeometry(10, 640, 150, 200)
 
         self.edge_order_label = QLabel(self)
         self.edge_order_label.setGeometry(10, 640, 150, 200)

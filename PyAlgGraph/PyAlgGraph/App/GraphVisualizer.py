@@ -1,20 +1,37 @@
 import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QLabel
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QLabel, QFrame
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import networkx as nx
 from matplotlib.lines import Line2D
+from PyQt5.QtGui import QColor
 
 class GraphVisualizer(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.figure = Figure()
-        self.figure.set_size_inches(10, 8)
+        
+        # Create a white figure with dark grey background for contrast
+        self.figure = Figure(figsize=(10, 8), facecolor='white')
         self.canvas = FigureCanvas(self.figure)
+        
+        # Add a frame around the canvas for better visibility
+        self.canvas_frame = QFrame()
+        self.canvas_frame.setFrameShape(QFrame.Box)
+        self.canvas_frame.setFrameShadow(QFrame.Sunken)
+        self.canvas_frame.setLineWidth(2)
+        self.canvas_frame.setStyleSheet("border: 2px solid black;")
+        
+        canvas_layout = QVBoxLayout(self.canvas_frame)
+        canvas_layout.setContentsMargins(0, 0, 0, 0)
+        canvas_layout.addWidget(self.canvas)
+        
         self.label = QLabel(self)
+        self.label.setStyleSheet("color: white;")
         self.step_label = QLabel(self)
+        self.step_label.setStyleSheet("color: white;")
+        
         layout = QVBoxLayout()
-        layout.addWidget(self.canvas)
+        layout.addWidget(self.canvas_frame)
         layout.addWidget(self.label)
         layout.addWidget(self.step_label)
         self.setLayout(layout)
@@ -22,7 +39,8 @@ class GraphVisualizer(QWidget):
 
     def create_graph(self, graph):
         self.figure.clear()
-        ax = self.figure.add_subplot(111)
+        # Use light grey for subplot background for better contrast with the white canvas
+        ax = self.figure.add_subplot(111, facecolor='#f0f0f0')
         if self.positions is None:
             self.positions = nx.spring_layout(graph, k=0.5, iterations=50)
         
