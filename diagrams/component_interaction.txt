@@ -1,32 +1,46 @@
-+------------------------+        +-------------------------+
-|                        |        |                         |
-|          App           |<------>|   BipartiteGraphWindow  |
-|                        |        |                         |
-+------------------------+        +-------------------------+
-  ^      ^      ^     ^                       |
-  |      |      |     |                       |
-  |      |      |     |                       v
-  |      |      |     |           +-------------------------+
-  |      |      |     |           |                         |
-  |      |      |     +---------->|     GraphVisualizer     |
-  |      |      |                 |                         |
-  |      |      |                 +-------------------------+
-  |      |      |                             ^
-  |      |      |                             |
-  |      |      v                             |
-  |      |    +-------------------------+     |
-  |      |    |                         |     |
-  |      +--->|      GraphColorer       |-----+
-  |           |                         |
-  |           +-------------------------+
-  |                      ^
-  |                      |
-  v                      v
-+-------------------------+     +-------------------------+
-|                         |     |                         |
-|    StatisticsWindow     |     |  AlgorithmExplanation   |
-|                         |     |        Window           |
-+-------------------------+     +-------------------------+
++------------------------+        +-------------------------+        +------------------------+
+|                        |        |                         |        |                        |
+|          App           |<------>|   BipartiteGraphWindow  |<------>|      GraphWindow      |
+|                        |        |                         |        |                        |
++------------------------+        +-------------------------+        +------------------------+
+  ^      ^      ^     ^                       |                                ^       |
+  |      |      |     |                       |                                |       |
+  |      |      |     |                       v                                |       |
+  |      |      |     |           +-------------------------+                  |       |
+  |      |      |     |           |                         |                  |       |
+  |      |      |     +---------->|     GraphVisualizer     |<-----------------+       |
+  |      |      |                 |                         |                          |
+  |      |      |                 +-------------------------+                          |
+  |      |      |                             ^                                        |
+  |      |      |                             |                                        |
+  |      |      v                             |                                        |
+  |      |    +-------------------------+     |                                        |
+  |      |    |                         |     |                                        |
+  |      +--->|      GraphColorer       |-----+                                        |
+  |      |    |                         |                                              |
+  |      |    +-------------------------+                                              |
+  |      |                ^                                                            |
+  |      |                |                                                            |
+  |      |                v                                                            |
+  |      |  +-------------------------+                                                |
+  |      |  |                         |                                                |
+  |      +->|  AlgorithmExplanation   |                                                |
+  |         |        Window           |                                                |
+  |         +-------------------------+                                                |
+  |                                                                                    |
+  v                                                           v                        |
++-------------------------+                      +------------------------+            |
+|                         |                      |                        |            |
+|    StatisticsWindow     |<---------------------|   UserOrderDialog      |            |
+|                         |                      |                        |            |
++-------------------------+                      +------------------------+            |
+        ^                                                   |                          |
+        |                                                   v                          |
+        |                             +-------------------------+                      |
+        |                             |                         |                      |
+        +----------------------------|   RearrangeOrderDialog  |                      |
+                                      |                         |
+                                      +-------------------------+
 
 COMPONENT INTERACTION IN PyAlgGraph
 ===================================
@@ -38,6 +52,10 @@ User -> App: Requests to create bipartite graph
 App -> BipartiteGraphWindow: Creates window for graph creation
 User -> BipartiteGraphWindow: Creates graph (adds vertices & edges)
 BipartiteGraphWindow -> App: Returns created graph
+User -> App: Requests to create general graph
+App -> GraphWindow: Creates window for general graph creation/manipulation
+User -> GraphWindow: Creates graph (adds vertices & edges)
+GraphWindow -> App: Returns created graph
 User -> App: Requests to color graph
 App -> GraphColorer: Requests coloring algorithm execution
 GraphColorer -> App: Returns coloring results
@@ -47,36 +65,60 @@ User -> App: Requests statistics
 App -> StatisticsWindow: Shows graph statistics
 User -> App: Requests algorithm explanation
 App -> AlgorithmExplanationWindow: Shows algorithm details
+User -> App: Requests custom edge ordering
+App -> UserOrderDialog: Opens dialog directly from main interface
+UserOrderDialog -> RearrangeOrderDialog: Rearranges edges in specific order
+RearrangeOrderDialog -> StatisticsWindow: Updates statistics with new edge order
 
 2. DATA FLOW
 ------------
 BipartiteGraphWindow --[Graph Data]--> App
+GraphWindow --[Graph Data]--> App
 App --[Graph Data]--> GraphColorer
 GraphColorer --[Coloring Results]--> App
 App --[Colored Graph]--> GraphVisualizer
 App --[Coloring Results]--> StatisticsWindow
 App --[Algorithm Info]--> AlgorithmExplanationWindow
+GraphWindow --[Graph Data]--> GraphVisualizer
+App --[Edge Order Request]--> UserOrderDialog
+GraphColorer --[Algorithm Details]--> AlgorithmExplanationWindow
+UserOrderDialog --[Edge Order]--> RearrangeOrderDialog
+UserOrderDialog --[Order Statistics]--> StatisticsWindow
+RearrangeOrderDialog --[Updated Statistics]--> StatisticsWindow
 
 3. KEY FUNCTION CALLS
 ---------------------
 App -> BipartiteGraphWindow: open_bipartite_graph_window()
 BipartiteGraphWindow -> App: create_bipartite_graph()
+App -> GraphWindow: open_graph_window(graph, use_user_order)
+GraphWindow -> App: create_graph()
 App -> GraphColorer: bipartite_coloring(graph)
                      bipartite_degree_coloring(graph)
                      bipartite_user_order_coloring(graph, edge_order)
+                     general_graph_coloring(graph)
 GraphColorer -> App: Return edge_colors
+GraphColorer -> AlgorithmExplanationWindow: provide_algorithm_details()
 App -> GraphVisualizer: draw_bipartite_graph(graph, edge_colors)
                         draw_bipartite_matching()
+                        draw_general_graph(graph, edge_colors)
 App -> StatisticsWindow: update_statistics()
 StatisticsWindow -> App: get_colors_used(), get_algorithm_used(), get_connections()
 App -> AlgorithmExplanationWindow: show_algorithm_explanation()
+GraphWindow -> GraphVisualizer: visualize_graph(graph, colors)
+App -> UserOrderDialog: open_user_order_dialog(edges)
+UserOrderDialog -> StatisticsWindow: update_order_statistics(edge_order)
+GraphWindow -> UserOrderDialog: set_custom_order(edges)
+UserOrderDialog -> RearrangeOrderDialog: rearrange_edge_order(edges)
+RearrangeOrderDialog -> StatisticsWindow: update_statistics_with_new_order()
 
 4. COMPONENT RESPONSIBILITIES
 ----------------------------
-App: Central control, coordinates all other components
-BipartiteGraphWindow: UI for creating bipartite graphs
-GraphWindow: UI for creating general graphs
-GraphColorer: Algorithms for coloring graphs
-GraphVisualizer: Visualization of graphs and colorings
-StatisticsWindow: Display of statistics about colorings
-AlgorithmExplanationWindow: Explanations of algorithms 
+App: Control central, coordina todos los demás componentes
+BipartiteGraphWindow: Interfaz de usuario para crear grafos bipartitos
+GraphWindow: Interfaz de usuario para crear y manipular grafos generales
+GraphColorer: Algoritmos para colorear grafos
+GraphVisualizer: Visualización de grafos y coloraciones
+StatisticsWindow: Visualización de estadísticas sobre coloraciones
+AlgorithmExplanationWindow: Explicaciones de algoritmos
+UserOrderDialog: Diálogo para definir orden personalizado de aristas
+RearrangeOrderDialog: Diálogo para reorganizar el orden de las aristas
