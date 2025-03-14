@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QGraphicsScene, QGraphicsV
 from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QPen, QBrush, QPainter, QFont
 import networkx as nx
+from styles import get_bipartite_window_style
 
 class BipartiteGraphWindow(QMainWindow):
     def __init__(self, app, graph, parent=None):
@@ -13,6 +14,9 @@ class BipartiteGraphWindow(QMainWindow):
         self.edge_creation_order = []
         
         self.resize(1600, 900)
+        
+        # Apply custom styles
+        self.setStyleSheet(get_bipartite_window_style())
 
         self.scene = QGraphicsScene()
         self.view = QGraphicsView(self.scene, self)
@@ -49,7 +53,7 @@ class BipartiteGraphWindow(QMainWindow):
         self.delete_button.clicked.connect(self.delete_mode)
         self.delete_button.setGeometry(10, 250, 150, 70)
 
-        self.create_graph_button = QPushButton('Create Bipartite Graph', self)
+        self.create_graph_button = QPushButton('Create', self)
         self.create_graph_button.clicked.connect(self.create_graph)
         self.create_graph_button.setGeometry(10, 330, 150, 70)
 

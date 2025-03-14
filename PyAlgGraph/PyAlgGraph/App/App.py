@@ -1,16 +1,14 @@
 from PyQt5.QtWidgets import (
     QVBoxLayout, QMainWindow, QPushButton, QGraphicsScene, QGraphicsView, 
     QGraphicsEllipseItem, QComboBox, QGraphicsTextItem, QLabel, QGraphicsLineItem, 
-    QWidget, QHBoxLayout, QDialog, QMessageBox, QScrollArea  # Add this import at the top of the file
+    QWidget, QHBoxLayout, QDialog, QMessageBox, QScrollArea, QSizePolicy
 )
 from PyQt5.QtCore import Qt, QPointF
-from PyQt5.QtGui import QPen, QBrush, QPainter, QFont
-from WeightDialog import WeightDialog
+from PyQt5.QtGui import QPen, QBrush, QPainter, QFont, QColor
 from GraphVisualizer import GraphVisualizer
 from GraphColorer import GraphColorer
 from GraphAnalyzer import GraphAnalyzer
 from GraphIO import GraphIO
-from Tutorial import Tutorial
 from StepByStepSolver import StepByStepSolver
 from GraphWindow import GraphWindow
 from BipartiteGraphWindow import BipartiteGraphWindow
@@ -25,12 +23,59 @@ class App(QMainWindow):
         super().__init__()
         app.setWindowTitle('PyAlgGraph')
         app.resize(1600, 900)
+        
+        # Add dark theme background styling directly
+        app.setStyleSheet("""
+        QMainWindow, QWidget {
+            background-color: #3a3a3a;
+            color: white;
+        }
+        QPushButton {
+            background-color: #555555;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #666666;
+        }
+        QComboBox {
+            background-color: #555555;
+            color: white;
+            border: 1px solid #666666;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        QComboBox::drop-down {
+            border: 0px;
+            width: 20px;
+        }
+        /* Improved dropdown styling to show full text */
+        QComboBox QAbstractItemView {
+            background-color: #555555;
+            color: white;
+            border: 1px solid #777777;
+            selection-background-color: #4a86e8;
+            selection-color: white;
+            min-width: 300px; /* Ensure dropdown is wide enough */
+            padding: 5px;
+        }
+        QGraphicsView {
+            background-color: white;
+            border: 2px solid black;
+        }
+        QLabel {
+            color: white;
+        }
+        """)
+        
         app.analyzer = GraphAnalyzer()
         app.graph = nx.Graph()
         app.colorer = GraphColorer(app.graph)
         app.analyzer = GraphAnalyzer()
         app.io = GraphIO()
-        app.tutorial = Tutorial()
         app.solver = StepByStepSolver()
         central_widget = QWidget()
         app.setCentralWidget(central_widget)
@@ -48,6 +93,13 @@ class App(QMainWindow):
         app.secuencial_coloring_button.addItems(["Secuencial coloring default order", "Secuencial coloring user order"])
         app.secuencial_coloring_button.activated[str].connect(app.on_secuencial_coloring_button_activated)
         app.secuencial_coloring_button.setFixedSize(200, 60)
+        app.secuencial_coloring_button.setMaxVisibleItems(10)  # Show more items
+        app.secuencial_coloring_button.setSizeAdjustPolicy(QComboBox.AdjustToContents)  # Adjust dropdown width
+        app.secuencial_coloring_button.setStyleSheet("""
+            QComboBox QAbstractItemView {
+                min-width: 300px;
+            }
+        """)
         sidebar_layout.addWidget(app.secuencial_coloring_button)
         # Add two empty spaces
         sidebar_layout.addSpacing(60)
@@ -67,6 +119,13 @@ class App(QMainWindow):
         ])
         app.color_bipartite_graph_button.activated[str].connect(app.on_color_bipartite_graph_selected)
         app.color_bipartite_graph_button.setFixedSize(200, 60)
+        app.color_bipartite_graph_button.setMaxVisibleItems(10)  # Show more items
+        app.color_bipartite_graph_button.setSizeAdjustPolicy(QComboBox.AdjustToContents)  # Adjust dropdown width
+        app.color_bipartite_graph_button.setStyleSheet("""
+            QComboBox QAbstractItemView {
+                min-width: 300px;
+            }
+        """)
         sidebar_layout.addWidget(app.color_bipartite_graph_button)
         # Add four empty spaces
         sidebar_layout.addSpacing(60)
@@ -103,14 +162,35 @@ class App(QMainWindow):
         # Create right sidebar for sorted edges with scroll area
         right_sidebar = QWidget()
         right_sidebar.setFixedWidth(220)
+        right_sidebar.setStyleSheet("background-color: #3a3a3a; color: white;")
         
         # Create a scroll area
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setStyleSheet("""
+            QScrollArea {
+                background-color: #3a3a3a;
+                border: none;
+            }
+            QScrollBar:vertical {
+                background: #2d2d2d;
+                width: 10px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #555555;
+                min-height: 20px;
+                border-radius: 5px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+        """)
         
         # Create a widget to hold the content
         scroll_content = QWidget()
+        scroll_content.setStyleSheet("background-color: #3a3a3a; color: white;")
         right_sidebar_layout = QVBoxLayout(scroll_content)
         right_sidebar_layout.setSpacing(0)
         right_sidebar_layout.setContentsMargins(5, 5, 5, 5)
@@ -238,9 +318,7 @@ class App(QMainWindow):
             self.sorted_edges_combined.deleteLater()
         
         # Create a single label with both title and content
-        self.sorted_edges_combined = QLabel(sorted_edges_text)
-        self.sorted_edges_combined.setWordWrap(True)
-        self.sorted_edges_combined.setContentsMargins(0, 0, 0, 0)
+        self.sorted_edges_combined = self.create_styled_sidebar_label(sorted_edges_text)
         self.right_sidebar_layout.addWidget(self.sorted_edges_combined)
 
     def secuencial_coloring_user_order(app):
@@ -427,9 +505,22 @@ class App(QMainWindow):
                     if not hasattr(self, 'explanation_button'):
                         self.explanation_button = QPushButton("Show Algorithm Explanation")
                         self.explanation_button.clicked.connect(self.show_algorithm_explanation)
-                        self.explanation_button.setContentsMargins(0, 0, 0, 0)
+                        self.explanation_button.setStyleSheet("""
+                            QPushButton {
+                                background-color: #444444;
+                                color: white;
+                                border: none;
+                                padding: 8px;
+                                border-radius: 4px;
+                                font-weight: bold;
+                                margin-top: 10px;
+                            }
+                            QPushButton:hover {
+                                background-color: #555555;
+                            }
+                        """)
                         self.right_sidebar_layout.addWidget(self.explanation_button)
-                    self.explanation_button.setVisible(True)
+                        self.explanation_button.setVisible(True)
                     
                     self.right_sidebar.setVisible(True)
                     
@@ -624,18 +715,8 @@ class App(QMainWindow):
                     matching_text += f"{left}-{right}\n"
                 matching_text += "\n"  # Add space between iterations
             
-            # Don't use the sorted_edges_label which appears below the graph
-            # Instead, create a dedicated label in the right sidebar
-            
-            # Clear existing matching groups label if it exists
-            if hasattr(self, 'matching_groups_label'):
-                self.right_sidebar_layout.removeWidget(self.matching_groups_label)
-                self.matching_groups_label.deleteLater()
-            
-            # Add the new matching groups label to the right sidebar
-            self.matching_groups_label = QLabel(matching_text)
-            self.matching_groups_label.setWordWrap(True)
-            self.matching_groups_label.setContentsMargins(5, 5, 5, 5)
+            # Create a label for matching groups
+            self.matching_groups_label = self.create_styled_sidebar_label(matching_text)
             self.right_sidebar_layout.addWidget(self.matching_groups_label)
             
             # Make sure the sorted_edges_label is not visible
@@ -646,9 +727,22 @@ class App(QMainWindow):
             if not hasattr(self, 'explanation_button'):
                 self.explanation_button = QPushButton("Show Algorithm Explanation")
                 self.explanation_button.clicked.connect(self.show_algorithm_explanation)
-                self.explanation_button.setContentsMargins(0, 0, 0, 0)  # Remove margins
+                self.explanation_button.setStyleSheet("""
+                    QPushButton {
+                        background-color: #444444;
+                        color: white;
+                        border: none;
+                        padding: 8px;
+                        border-radius: 4px;
+                        font-weight: bold;
+                        margin-top: 10px;
+                    }
+                    QPushButton:hover {
+                        background-color: #555555;
+                    }
+                """)
                 self.right_sidebar_layout.addWidget(self.explanation_button)
-            self.explanation_button.setVisible(True)
+                self.explanation_button.setVisible(True)
 
     def show_algorithm_explanation(self):
         explanation_window = AlgorithmExplanationWindow(self)
@@ -728,15 +822,12 @@ class App(QMainWindow):
                 }]
                 
                 self.current_step = len(self.matching_states) - 1  # Show the final state
-                self.update_bipartite_visualization()
+                self.update_bipartite_visualization()  # This already calls display_matching_groups for final state
                 self.visualizer.draw_execution_time(self.colorer.execution_time)
                 
                 # Hide navigation buttons
                 self.prev_button.setVisible(False)
                 self.next_button.setVisible(False)
-                
-                # Update and show matching groups
-                self.display_matching_groups()
                 
                 # Display color classes
                 self.display_color_classes(edge_colors)
@@ -781,6 +872,7 @@ class App(QMainWindow):
         self.algorithm_combined = QLabel(process_text)
         self.algorithm_combined.setWordWrap(True)
         self.algorithm_combined.setContentsMargins(0, 0, 0, 0)
+        self.algorithm_combined.setStyleSheet("color: white; background-color: transparent;")
         self.right_sidebar_layout.addWidget(self.algorithm_combined)
 
     def display_color_classes(self, edge_colors):
@@ -832,6 +924,7 @@ class App(QMainWindow):
         self.color_classes_combined = QLabel(color_text)
         self.color_classes_combined.setWordWrap(True)
         self.color_classes_combined.setContentsMargins(0, 0, 0, 0)
+        self.color_classes_combined.setStyleSheet("color: white; background-color: transparent;")
         self.right_sidebar_layout.addWidget(self.color_classes_combined)
 
         # Calculate maximum degree (∆)
@@ -898,9 +991,11 @@ class App(QMainWindow):
             QLabel {
                 margin-top: 3px;
                 padding: 5px;
-                background-color: #f0f0f0;
+                background-color: #444444;
+                color: white;
                 border-radius: 5px;
                 font-weight: bold;
+                border: 1px solid #555555;
             }
         """)
         self.right_sidebar_layout.addWidget(self.optimality_label)
@@ -911,10 +1006,24 @@ class App(QMainWindow):
             self.right_sidebar_layout.removeWidget(self.rearrange_button)
             self.rearrange_button.deleteLater()
         
-        # Create a new button
+        # Create the rearrange button
         self.rearrange_button = QPushButton("Rearrange Coloring Order")
         self.rearrange_button.clicked.connect(self.show_rearrange_dialog)
-        self.rearrange_button.setContentsMargins(0, 0, 0, 0)
+        self.rearrange_button.setStyleSheet("""
+            QPushButton {
+                background-color: #444444;
+                color: white;
+                border: none;
+                padding: 8px;
+                border-radius: 4px;
+                font-weight: bold;
+                margin-top: 10px;
+            }
+            QPushButton:hover {
+                background-color: #555555;
+            }
+        """)
+        
         self.right_sidebar_layout.addWidget(self.rearrange_button)
 
     def show_rearrange_dialog(self):
@@ -1052,3 +1161,28 @@ class App(QMainWindow):
         else:
             print("Graph is not bipartite or no graph is loaded")
             QMessageBox.warning(self, "Error", "The current graph is not bipartite or no graph is loaded.")
+
+    def create_styled_sidebar_label(self, text, is_header=False):
+        """Create a QLabel with consistent dark theme styling for the right sidebar"""
+        label = QLabel(text)
+        label.setWordWrap(True)
+        label.setContentsMargins(0, 0, 0, 0)
+        
+        if is_header:
+            # Style for header labels
+            label.setStyleSheet("""
+                color: white; 
+                background-color: transparent;
+                font-weight: bold;
+                font-size: 14px;
+                padding: 5px 0px;
+            """)
+        else:
+            # Style for regular labels
+            label.setStyleSheet("""
+                color: white; 
+                background-color: transparent;
+                padding: 2px 0px;
+            """)
+            
+        return label
