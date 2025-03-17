@@ -143,7 +143,9 @@ class GraphColorer:
     def maximal_matching_bipartite(self, graph: nx.Graph):
         start_time = time.perf_counter()
         
-        left_nodes, right_nodes = nx.bipartite.sets(graph)
+        # Create a deep copy of the graph to avoid modifying the original
+        graph_copy = graph.copy()
+        left_nodes, right_nodes = nx.bipartite.sets(graph_copy)
         matching_states = []
         edge_colors = {}
         color_index = 0
@@ -152,7 +154,7 @@ class GraphColorer:
             matching = {}
             # Initial greedy matching
             for left in left_nodes:
-                for right in graph.neighbors(left):
+                for right in graph_copy.neighbors(left):
                     if left not in matching and right not in matching.values():
                         matching[left] = right
                         break
@@ -164,7 +166,7 @@ class GraphColorer:
             matching_states.append({"matching": matching.copy(), "augmenting_path": None, "color": colors[color_index]})
 
             while True:
-                path = self.find_augmenting_path(graph, matching, left_nodes, right_nodes)
+                path = self.find_augmenting_path(graph_copy, matching, left_nodes, right_nodes)
                 if not path:
                     break
                 
@@ -186,11 +188,11 @@ class GraphColorer:
             
             color_index += 1
 
-            # Remove matched edges from the graph
+            # Remove matched edges from the COPY of the graph
             for left, right in matching.items():
-                graph.remove_edge(left, right)
+                graph_copy.remove_edge(left, right)
             
-            if not graph.edges():
+            if not graph_copy.edges():
                 break
         
         end_time = time.perf_counter()

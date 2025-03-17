@@ -312,10 +312,14 @@ class App(QMainWindow):
                 formatted_edge = self.format_bipartite_edge(edge)
                 sorted_edges_text += formatted_edge + "\n"
         
-        # Clear existing content if needed
-        if hasattr(self, 'sorted_edges_combined'):
-            self.right_sidebar_layout.removeWidget(self.sorted_edges_combined)
-            self.sorted_edges_combined.deleteLater()
+        # Safely remove existing widget if it exists and is valid
+        if hasattr(self, 'sorted_edges_combined') and self.sorted_edges_combined is not None:
+            try:
+                self.right_sidebar_layout.removeWidget(self.sorted_edges_combined)
+                self.sorted_edges_combined.deleteLater()
+            except (RuntimeError, TypeError, AttributeError):
+                # Widget was already deleted or is invalid
+                pass
         
         # Create a single label with both title and content
         self.sorted_edges_combined = self.create_styled_sidebar_label(sorted_edges_text)
@@ -344,9 +348,40 @@ class App(QMainWindow):
         elif text == "Color Bipartite Graph (User Order)":
             self.color_bipartite_graph_user_order()
 
+    def reset_bipartite_state(self):
+        """Reset bipartite graph state variables to ensure clean state between algorithm switches."""
+        # Clean up algorithm-specific state variables
+        if hasattr(self, 'matching_states'):
+            del self.matching_states
+        if hasattr(self, 'edge_colors'):
+            del self.edge_colors
+        if hasattr(self, 'cumulative_edge_colors'):
+            del self.cumulative_edge_colors
+        if hasattr(self.visualizer, 'final_edge_colors'):
+            del self.visualizer.final_edge_colors
+        if hasattr(self, 'iteration_states'):
+            del self.iteration_states
+            
+        # Reset any navigation-related state
+        if hasattr(self, 'current_step'):
+            del self.current_step
+        
+        # This is important - clear the right sidebar to avoid stale information
+        self.clear_right_sidebar()
+        
+        # Reset the colorer to ensure we have a fresh start
+        self.colorer = GraphColorer(self.graph)
+        
+        # Hide step buttons when switching algorithms
+        self.prev_button.setVisible(False)
+        self.next_button.setVisible(False)
+
     def color_bipartite_graph(self):
         if isinstance(self.graph, nx.Graph) and nx.is_bipartite(self.graph):
             print("Graph is bipartite")
+            
+            # Reset state to avoid conflicts with previous algorithms
+            self.reset_bipartite_state()
             
             # Check for connected components
             components = list(nx.connected_components(self.graph))
@@ -445,6 +480,7 @@ class App(QMainWindow):
                 self.update_bipartite_visualization()
                 self.visualizer.draw_execution_time(self.colorer.execution_time)
                 
+                # Directly set navigation buttons to visible
                 self.prev_button.setVisible(True)
                 self.next_button.setVisible(True)
         else:
@@ -639,7 +675,22 @@ class App(QMainWindow):
         if self.current_step < len(self.matching_states) - 1:
             self.current_step += 1
             self.update_bipartite_visualization()
-
+            
+    def update_bipartite_buttons(self):
+        """Update the visibility of the bipartite step navigation buttons based on current state."""
+        if hasattr(self, 'matching_states') and self.matching_states:
+            # Enable or disable Previous button based on whether we're at the first step
+            self.prev_button.setEnabled(self.current_step > 0)
+            # Enable or disable Next button based on whether we're at the last step
+            self.next_button.setEnabled(self.current_step < len(self.matching_states) - 1)
+            # Make both buttons visible
+            self.prev_button.setVisible(True)
+            self.next_button.setVisible(True)
+        else:
+            # If there are no matching states, hide the buttons
+            self.prev_button.setVisible(False)
+            self.next_button.setVisible(False)
+            
     def display_matching_groups(self):
         if hasattr(self, 'matching_states'):
             # Create text for matching groups
@@ -715,6 +766,15 @@ class App(QMainWindow):
                     matching_text += f"{left}-{right}\n"
                 matching_text += "\n"  # Add space between iterations
             
+            # Safely remove existing label if it exists and is valid
+            if hasattr(self, 'matching_groups_label') and self.matching_groups_label is not None:
+                try:
+                    self.right_sidebar_layout.removeWidget(self.matching_groups_label)
+                    self.matching_groups_label.deleteLater()
+                except (RuntimeError, TypeError, AttributeError):
+                    # Label was already deleted or is invalid
+                    pass
+            
             # Create a label for matching groups
             self.matching_groups_label = self.create_styled_sidebar_label(matching_text)
             self.right_sidebar_layout.addWidget(self.matching_groups_label)
@@ -723,26 +783,36 @@ class App(QMainWindow):
             if hasattr(self, 'sorted_edges_label'):
                 self.sorted_edges_label.setVisible(False)
             
-            # Create and show the explanation button if it doesn't exist
-            if not hasattr(self, 'explanation_button'):
-                self.explanation_button = QPushButton("Show Algorithm Explanation")
-                self.explanation_button.clicked.connect(self.show_algorithm_explanation)
-                self.explanation_button.setStyleSheet("""
-                    QPushButton {
-                        background-color: #444444;
-                        color: white;
-                        border: none;
-                        padding: 8px;
-                        border-radius: 4px;
-                        font-weight: bold;
-                        margin-top: 10px;
-                    }
-                    QPushButton:hover {
-                        background-color: #555555;
-                    }
-                """)
-                self.right_sidebar_layout.addWidget(self.explanation_button)
-                self.explanation_button.setVisible(True)
+            # Create and show the explanation button
+            # First try to remove the existing button if it exists
+            if hasattr(self, 'explanation_button') and self.explanation_button is not None:
+                try:
+                    self.right_sidebar_layout.removeWidget(self.explanation_button)
+                    self.explanation_button.deleteLater()
+                except (RuntimeError, TypeError, AttributeError):
+                    # Button was already deleted or is invalid
+                    pass
+                self.explanation_button = None
+            
+            # Now create a new button
+            self.explanation_button = QPushButton("Show Algorithm Explanation")
+            self.explanation_button.clicked.connect(self.show_algorithm_explanation)
+            self.explanation_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #444444;
+                    color: white;
+                    border: none;
+                    padding: 8px;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    margin-top: 10px;
+                }
+                QPushButton:hover {
+                    background-color: #555555;
+                }
+            """)
+            self.right_sidebar_layout.addWidget(self.explanation_button)
+            self.explanation_button.setVisible(True)
 
     def show_algorithm_explanation(self):
         explanation_window = AlgorithmExplanationWindow(self)
@@ -751,6 +821,9 @@ class App(QMainWindow):
     def color_bipartite_graph_final(self):
         if isinstance(self.graph, nx.Graph) and nx.is_bipartite(self.graph):
             try:
+                # Reset state to avoid conflicts with previous algorithms
+                self.reset_bipartite_state()
+                
                 matching_states, edge_colors = self.colorer.maximal_matching_bipartite(self.graph)
                 
                 # Process all states to build up the final edge colors
@@ -822,17 +895,23 @@ class App(QMainWindow):
                 }]
                 
                 self.current_step = len(self.matching_states) - 1  # Show the final state
+                
+                # Make sure the right sidebar is completely cleared
+                self.clear_right_sidebar()
+                
+                # Update visualization and sidebar
                 self.update_bipartite_visualization()  # This already calls display_matching_groups for final state
                 self.visualizer.draw_execution_time(self.colorer.execution_time)
-                
-                # Hide navigation buttons
-                self.prev_button.setVisible(False)
-                self.next_button.setVisible(False)
                 
                 # Display color classes
                 self.display_color_classes(edge_colors)
                 
+                # Ensure the sidebar is visible
                 self.right_sidebar.setVisible(True)
+                
+                # Hide navigation buttons
+                self.prev_button.setVisible(False)
+                self.next_button.setVisible(False)
                 
             except Exception as e:
                 print(f"Error in maximal_matching_bipartite: {e}")
@@ -863,10 +942,14 @@ class App(QMainWindow):
             process_text += "4. Ensures bipartite properties\n   are maintained\n"
             process_text += "5. Repeats until all edges are\n   colored"
         
-        # Clear existing content if needed
-        if hasattr(self, 'algorithm_combined'):
-            self.right_sidebar_layout.removeWidget(self.algorithm_combined)
-            self.algorithm_combined.deleteLater()
+        # Safely remove existing widget if it exists and is valid
+        if hasattr(self, 'algorithm_combined') and self.algorithm_combined is not None:
+            try:
+                self.right_sidebar_layout.removeWidget(self.algorithm_combined)
+                self.algorithm_combined.deleteLater()
+            except (RuntimeError, TypeError, AttributeError):
+                # Widget was already deleted or is invalid
+                pass
         
         # Create a single label with both title and content
         self.algorithm_combined = QLabel(process_text)
@@ -915,10 +998,14 @@ class App(QMainWindow):
                 color_text += ", ".join(formatted_edges)
                 color_text += "\n"
         
-        # Clear existing content if needed
-        if hasattr(self, 'color_classes_combined'):
-            self.right_sidebar_layout.removeWidget(self.color_classes_combined)
-            self.color_classes_combined.deleteLater()
+        # Safely remove existing widget if it exists and is valid
+        if hasattr(self, 'color_classes_combined') and self.color_classes_combined is not None:
+            try:
+                self.right_sidebar_layout.removeWidget(self.color_classes_combined)
+                self.color_classes_combined.deleteLater()
+            except (RuntimeError, TypeError, AttributeError):
+                # Widget was already deleted or is invalid
+                pass
         
         # Create a single label with both title and content
         self.color_classes_combined = QLabel(color_text)
@@ -978,10 +1065,14 @@ class App(QMainWindow):
         else:
             optimality_text = "No colors have been applied yet."
         
-        # Clear existing content if needed
-        if hasattr(self, 'optimality_label'):
-            self.right_sidebar_layout.removeWidget(self.optimality_label)
-            self.optimality_label.deleteLater()
+        # Safely remove existing widget if it exists and is valid
+        if hasattr(self, 'optimality_label') and self.optimality_label is not None:
+            try:
+                self.right_sidebar_layout.removeWidget(self.optimality_label)
+                self.optimality_label.deleteLater()
+            except (RuntimeError, TypeError, AttributeError):
+                # Widget was already deleted or is invalid
+                pass
         
         # Create the optimality label
         self.optimality_label = QLabel(optimality_text)
@@ -1001,10 +1092,14 @@ class App(QMainWindow):
         self.right_sidebar_layout.addWidget(self.optimality_label)
 
     def show_rearrange_button(self):
-        # Clear existing button if needed
-        if hasattr(self, 'rearrange_button'):
-            self.right_sidebar_layout.removeWidget(self.rearrange_button)
-            self.rearrange_button.deleteLater()
+        # Safely remove existing button if it exists and is valid
+        if hasattr(self, 'rearrange_button') and self.rearrange_button is not None:
+            try:
+                self.right_sidebar_layout.removeWidget(self.rearrange_button)
+                self.rearrange_button.deleteLater()
+            except (RuntimeError, TypeError, AttributeError):
+                # Button was already deleted or is invalid
+                pass
         
         # Create the rearrange button
         self.rearrange_button = QPushButton("Rearrange Coloring Order")
@@ -1060,18 +1155,39 @@ class App(QMainWindow):
             self.right_sidebar.setVisible(True)
 
     def clear_right_sidebar(self):
-        # Remove all widgets from the layout
+        """Clear all widgets from the right sidebar and reset widget references."""
+        # First, store references to all widget attributes that might be in the sidebar
+        sidebar_widget_attrs = [
+            'sorted_edges_combined', 
+            'algorithm_combined', 
+            'color_classes_combined',
+            'optimality_label',
+            'matching_groups_label',
+            'explanation_button',
+            'rearrange_button'
+        ]
+        
+        # For each attribute, set it to None if it exists
+        for attr in sidebar_widget_attrs:
+            if hasattr(self, attr):
+                setattr(self, attr, None)
+        
+        # Now remove all widgets from the layout
         while self.right_sidebar_layout.count():
             item = self.right_sidebar_layout.takeAt(0)
             widget = item.widget()
             if widget:
-                widget.deleteLater()
+                widget.hide()  # Hide before deleting to avoid visual glitches
+                widget.deleteLater()  # Schedule for deletion
 
     def color_bipartite_graph_degree_based(self):
         print("Starting degree-based coloring")
         if isinstance(self.graph, nx.Graph) and nx.is_bipartite(self.graph):
             try:
                 print("Graph is bipartite")
+                # Reset state to avoid conflicts with previous algorithms
+                self.reset_bipartite_state()
+                
                 # Initialize colorer if not already done
                 if not hasattr(self, 'colorer'):
                     self.colorer = GraphColorer(self.graph)
@@ -1087,10 +1203,16 @@ class App(QMainWindow):
                     self.visualizer.positions
                 )
                 
-                # Update the right sidebar
+                # Make sure the right sidebar is cleared
+                self.clear_right_sidebar()
+                
+                # Update the right sidebar with fresh content
                 self.display_sorted_edges()
                 self.display_algorithm_process("degree")
                 self.display_color_classes(edge_colors)
+                self.visualizer.draw_execution_time(self.colorer.execution_time)
+                
+                # Ensure the sidebar is visible
                 self.right_sidebar.setVisible(True)
                 
             except Exception as e:
@@ -1107,6 +1229,9 @@ class App(QMainWindow):
         if isinstance(self.graph, nx.Graph) and nx.is_bipartite(self.graph):
             try:
                 print("Graph is bipartite")
+                # Reset state to avoid conflicts with previous algorithms
+                self.reset_bipartite_state()
+                
                 # Initialize colorer if not already done
                 if not hasattr(self, 'colorer'):
                     self.colorer = GraphColorer(self.graph)
@@ -1141,14 +1266,17 @@ class App(QMainWindow):
                         self.visualizer.positions
                     )
                     
-                    # Clear the layout first to ensure correct order
+                    # Make sure the right sidebar is completely cleared
                     self.clear_right_sidebar()
                     
-                    # Update the right sidebar
+                    # Update the right sidebar with fresh content
                     self.display_sorted_edges()
                     self.display_algorithm_process("user")
                     self.display_color_classes(edge_colors)
-                    self.show_rearrange_button()  # Now this will be added at the end
+                    self.show_rearrange_button()  # Add the rearrange button
+                    self.visualizer.draw_execution_time(self.colorer.execution_time)
+                    
+                    # Ensure the sidebar is visible
                     self.right_sidebar.setVisible(True)
                 else:
                     print("No edge creation order found")
