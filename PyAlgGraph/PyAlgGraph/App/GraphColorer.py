@@ -12,7 +12,7 @@ class GraphColorer:
 
 
     def secuencial_coloring(self, graph: nx.Graph, edges: list):
-        start_time = time.time()
+        start_time = time.perf_counter()
         self.edge_colors = {}  # Store edge colors as class attribute
         
         # Get vertices sorted by degree (highest to lowest)
@@ -52,14 +52,14 @@ class GraphColorer:
                             self.sorted_edges.append(edge)
                             break
         
-        end_time = time.time()
+        end_time = time.perf_counter()
         self.execution_time = end_time - start_time
         self.colors_used = len(set(self.edge_colors.values()))
         self.algorithm_used = "Sequential Coloring with Degree Ordering"
         return self.edge_colors
     
     def bipartite_coloring(self, graph: nx.Graph):
-        start_time = time.time()
+        start_time = time.perf_counter()
         left_nodes = {n for n, d in graph.nodes(data=True) if d['bipartite'] == 0}
         right_nodes = set(graph) - left_nodes
 
@@ -78,7 +78,7 @@ class GraphColorer:
                     edge_colors[(left_node, neighbor)] = edge_color
                     available_colors.discard(edge_color)
 
-        end_time = time.time()
+        end_time = time.perf_counter()
         self.execution_time = end_time - start_time
         print("Execution time: ", self.execution_time, " seconds")
         self.colors_used = len(set(edge_colors.values()))
