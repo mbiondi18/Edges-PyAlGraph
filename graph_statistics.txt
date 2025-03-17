@@ -1,0 +1,26 @@
+Execution Time: 0.000047 seconds
+Number of Colors Used: 5
+Algorithm Used: Sequential User Order Coloring
+Graph Connections:
+1-2
+1-5
+1-6
+2-3
+2-6
+3-4
+3-6
+4-5
+4-6
+5-6
+
+Edge Processing Order:
+5-1
+1-6
+6-3
+6-4
+6-5
+3-4
+4-5
+6-2
+2-3
+1-2
