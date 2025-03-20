@@ -398,6 +398,10 @@ class App(QMainWindow):
                 subgraph = self.graph.subgraph(component).copy()
                 left_nodes, right_nodes = nx.bipartite.sets(subgraph)
                 
+                # Ordenar los nodos por su número (extraído de left_N o right_N)
+                left_nodes = sorted(left_nodes, key=lambda node: int(node.split('_')[1]))
+                right_nodes = sorted(right_nodes, key=lambda node: int(node.split('_')[1]))
+                
                 # Create positions if they don't exist
                 if self.visualizer.positions is None:
                     print("Creating new positions")
@@ -536,6 +540,9 @@ class App(QMainWindow):
                     
                     print(f"Final state edge_colors: {edge_colors}")
                     self.display_color_classes(edge_colors)
+                    
+                    # Add the rearrange button for the final state of step-by-step visualization
+                    self.show_rearrange_button()
                     
                     # Add the explanation button
                     if not hasattr(self, 'explanation_button'):
@@ -906,6 +913,9 @@ class App(QMainWindow):
                 # Display color classes
                 self.display_color_classes(edge_colors)
                 
+                # Add the rearrange button
+                self.show_rearrange_button()
+                
                 # Ensure the sidebar is visible
                 self.right_sidebar.setVisible(True)
                 
@@ -1210,6 +1220,7 @@ class App(QMainWindow):
                 self.display_sorted_edges()
                 self.display_algorithm_process("degree")
                 self.display_color_classes(edge_colors)
+                self.show_rearrange_button()  # Add the rearrange button
                 self.visualizer.draw_execution_time(self.colorer.execution_time)
                 
                 # Ensure the sidebar is visible

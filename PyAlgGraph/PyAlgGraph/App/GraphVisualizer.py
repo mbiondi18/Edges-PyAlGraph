@@ -108,6 +108,10 @@ class GraphVisualizer(QWidget):
         left_nodes = [n for n, d in graph.nodes(data=True) if d['bipartite'] == 0]
         right_nodes = [n for n, d in graph.nodes(data=True) if d['bipartite'] == 1]
         
+        # Ordenar los nodos por su número (extraído de left_N o right_N)
+        left_nodes = sorted(left_nodes, key=lambda node: int(node.split('_')[1]))
+        right_nodes = sorted(right_nodes, key=lambda node: int(node.split('_')[1]))
+        
         max_count = max(len(left_nodes), len(right_nodes))
         
         pos = {}
@@ -142,6 +146,10 @@ class GraphVisualizer(QWidget):
         left_nodes = [n for n, d in graph.nodes(data=True) if d['bipartite'] == 0]
         right_nodes = [n for n, d in graph.nodes(data=True) if d['bipartite'] == 1]
         
+        # Ordenar los nodos por su número (extraído de left_N o right_N)
+        left_nodes = sorted(left_nodes, key=lambda node: int(node.split('_')[1]))
+        right_nodes = sorted(right_nodes, key=lambda node: int(node.split('_')[1]))
+        
         nx.draw_networkx_nodes(graph, pos, nodelist=left_nodes, node_color='r', ax=ax, node_size=300)
         nx.draw_networkx_nodes(graph, pos, nodelist=right_nodes, node_color='b', ax=ax, node_size=300)
         
@@ -166,6 +174,10 @@ class GraphVisualizer(QWidget):
         # Draw nodes
         left_nodes = [n for n in graph.nodes() if n.startswith('left_')]
         right_nodes = [n for n in graph.nodes() if n.startswith('right_')]
+        
+        # Ordenar los nodos por su número (extraído de left_N o right_N)
+        left_nodes = sorted(left_nodes, key=lambda node: int(node.split('_')[1]))
+        right_nodes = sorted(right_nodes, key=lambda node: int(node.split('_')[1]))
         
         # Adjust node positions - NEW POSITIONING LOGIC
         # Calculate separate positions for each side, distributing evenly along the full height
@@ -307,6 +319,10 @@ class GraphVisualizer(QWidget):
         # Get left and right node sets
         left_nodes = [n for n, d in graph.nodes(data=True) if d.get('bipartite') == 0]
         right_nodes = [n for n, d in graph.nodes(data=True) if d.get('bipartite') == 1]
+        
+        # Ordenar los nodos por su número (extraído de left_N o right_N)
+        left_nodes = sorted(left_nodes, key=lambda node: int(node.split('_')[1]))
+        right_nodes = sorted(right_nodes, key=lambda node: int(node.split('_')[1]))
         
         # If positions are not provided or are out of bounds, create new ones
         if pos is None or any(abs(x) > 1 or abs(y) > 1 for x, y in pos.values()):
