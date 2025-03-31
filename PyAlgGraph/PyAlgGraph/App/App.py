@@ -1064,14 +1064,24 @@ class App(QMainWindow):
         
         # Create optimality message
         if colors_used > 0:
-            if colors_used <= max_degree + 1:
-                optimality_text = (f"The graph was colored with {colors_used} "
-                                 f"colors which is ∆+1 ({max_degree}+1) or "
-                                 f"less therefore the coloration was optimal")
+            if nx.is_bipartite(self.graph):
+                if colors_used <= max_degree:
+                    optimality_text = (f"The graph was colored with {colors_used} "
+                                     f"colors which is ∆ ({max_degree}) or "
+                                     f"less therefore the coloration was optimal")
+                else:
+                    optimality_text = (f"The graph was colored with {colors_used} "
+                                     f"colors which is more than ∆ ({max_degree}) "
+                                     f"therefore there is a better coloration to this graph")
             else:
-                optimality_text = (f"The graph was colored with {colors_used} "
-                                 f"colors which is more than ∆+1 ({max_degree}+1) "
-                                 f"therefore there is a better coloration to this graph")
+                if colors_used <= max_degree + 1:
+                    optimality_text = (f"The graph was colored with {colors_used} "
+                                     f"colors which is ∆+1 ({max_degree}+1) or "
+                                     f"less therefore the coloration was optimal")
+                else:
+                    optimality_text = (f"The graph was colored with {colors_used} "
+                                     f"colors which is more than ∆+1 ({max_degree}+1) "
+                                     f"therefore there is a better coloration to this graph")
         else:
             optimality_text = "No colors have been applied yet."
         
