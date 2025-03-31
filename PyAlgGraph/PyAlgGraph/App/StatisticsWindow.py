@@ -134,7 +134,19 @@ class StatisticsWindow(QWidget):
         
     def get_colors_used(self):
         if nx.is_bipartite(self.app.graph):
-            return 1
+            # Get the actual number of colors used for bipartite graphs
+            if hasattr(self.app.colorer, 'colors_used'):
+                return self.app.colorer.colors_used
+            elif hasattr(self.app.visualizer, 'final_edge_colors'):
+                return len(set(self.app.visualizer.final_edge_colors.values()))
+            elif hasattr(self.app, 'edge_colors'):
+                return len(set(self.app.edge_colors.values()))
+            # Try to get the colors from the graph edges
+            else:
+                edge_colors = nx.get_edge_attributes(self.app.graph, 'color')
+                if edge_colors:
+                    return len(set(edge_colors.values()))
+                return 1  # Fallback only if no color information is found
         elif hasattr(self.app.colorer, 'colors_used'):
             return self.app.colorer.colors_used
         else:
